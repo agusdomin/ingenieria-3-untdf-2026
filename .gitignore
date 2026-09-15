@@ -1,0 +1,38 @@
+# Entornos virtuales
+.venv/
+venv/
+ENV/
+env/
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Python y caché
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Django
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+*.log
+
+# Conservar archivos .gitkeep dentro de carpetas vacías necesarias
+!.gitkeep
+
+# IDEs y editores
+.idea/
+*.swp
+*.swo
+.vscode/*
+!.vscode/settings.json
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
