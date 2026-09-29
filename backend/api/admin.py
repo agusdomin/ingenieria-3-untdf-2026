@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Usuario, Zona, PlanSalida
+from .models import Usuario, Zona, PlanSalida, Observacion
 
 
 @admin.register(Usuario)
@@ -27,3 +27,10 @@ class PlanSalidaAdmin(admin.ModelAdmin):
     list_display = ('id', 'usuario', 'zona', 'fecha_hora_inicio', 'fecha_hora_retorno', 'cantidad_acompanantes', 'estado')
     list_filter = ('estado', 'fecha_hora_inicio', 'zona')
     search_fields = ('usuario__username', 'usuario__nombre', 'zona__nombre', 'itinerario_descripcion')
+
+
+@admin.register(Observacion)
+class ObservacionAdmin(admin.ModelAdmin):
+    list_display = ('titulo', 'usuario', 'zona', 'tipo', 'nivel_relevancia', 'fecha_hora')
+    list_filter = ('tipo', 'nivel_relevancia', 'zona', 'fecha_hora')
+    search_fields = ('titulo', 'descripcion', 'usuario__username', 'zona__nombre')
