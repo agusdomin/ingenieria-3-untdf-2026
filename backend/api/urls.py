@@ -9,11 +9,11 @@ from .viewsets import (
     ValoracionViewSet,
     DatosMeteorologicosViewSet,
 )
-# from .views import (
-#     CustomTokenObtainPairView,
-#     CustomTokenRefreshView,
-#     LogoutView,
-# )
+from .auth_views import (
+    LoginView,
+    RegisterView,
+    MeView,
+)
 
 router = DefaultRouter()
 
@@ -26,10 +26,13 @@ router.register(r'valoraciones', ValoracionViewSet, basename='valoraciones')
 router.register(r'datos-meteorologicos', DatosMeteorologicosViewSet, basename='datos-meteorologicos')
 
 urlpatterns = [
-    # Autenticación (descomentar al implementar views.py)
-    # path('auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    # path('auth/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
-    # path('auth/logout/', LogoutView.as_view(), name='logout'),
+    # Autenticación
+    path('auth/login', LoginView.as_view(), name='auth-login'),
+    path('auth/login/', LoginView.as_view(), name='auth-login-slash'),
+    path('auth/register', RegisterView.as_view(), name='auth-register'),
+    path('auth/register/', RegisterView.as_view(), name='auth-register-slash'),
+    path('auth/me', MeView.as_view(), name='auth-me'),
+    path('auth/me/', MeView.as_view(), name='auth-me-slash'),
 
     # Rutas generadas automáticamente por el router para los ViewSets
     path('', include(router.urls)),

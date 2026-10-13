@@ -1,6 +1,8 @@
-import * as SecureStore from 'expo-secure-store';
-
-import { api } from '../api/client';
+import {
+  api,
+  setStoredToken,
+  deleteStoredToken,
+} from '../api/client';
 
 import {
   AuthResponse,
@@ -16,15 +18,8 @@ export const login = async (
 
   const auth = response.data;
 
-  await SecureStore.setItemAsync(
-    'accessToken',
-    auth.accessToken
-  );
-
-  await SecureStore.setItemAsync(
-    'refreshToken',
-    auth.refreshToken
-  );
+  await setStoredToken('accessToken', auth.accessToken);
+  await setStoredToken('refreshToken', auth.refreshToken);
 
   return auth;
 };
@@ -32,27 +27,23 @@ export const login = async (
 export const register = async (
   data: RegisterDTO
 ): Promise<AuthResponse> => {
-  const response = await api.post(
-    '/auth/register',
-    data
-  );
+  const response = await api.post('/auth/register', data);
+
+  const auth = response.data;
+
+  await setStoredToken('accessToken', auth.accessToken);
+  await setStoredToken('refreshToken', auth.refreshToken);
+
+  return auth;
+};
+
+export const getCurrentUser = async (): Promise<User> => {
+  const response = await api.get('/auth/me');
 
   return response.data;
 };
 
-export const getCurrentUser =
-  async (): Promise<User> => {
-    const response = await api.get('/auth/me');
-
-    return response.data;
-  };
-
 export const logout = async () => {
-  await SecureStore.deleteItemAsync(
-    'accessToken'
-  );
-
-  await SecureStore.deleteItemAsync(
-    'refreshToken'
-  );
+  await deleteStoredToken('accessToken');
+  await deleteStoredToken('refreshToken');
 };

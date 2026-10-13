@@ -1,98 +1,61 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+import React from 'react';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function HomeScreen() {
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const router = useRouter();
+
+  if (isLoading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <View style={styles.container}>
+      <Text style={styles.title}>Plataforma de Avalanchas</Text>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+      <View style={styles.card}>
+        <Text style={styles.subtitle}>Estado de Sesión:</Text>
+        {isAuthenticated && user ? (
+          <>
+            <Text style={styles.text}>Conectado como: {user.firstName} {user.lastName}</Text>
+            <Text style={styles.text}>Email: {user.email}</Text>
+            <Text style={styles.badge}>Rol: {user.role}</Text>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+            <Pressable style={[styles.button, styles.logoutButton]} onPress={logout}>
+              <Text style={styles.buttonText}>Cerrar Sesión</Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <Text style={styles.text}>Modo Invitado (Solo lectura habilitada)</Text>
+            <Pressable
+              style={styles.button}
+              onPress={() => router.push('/auth/login' as any)}
+            >
+              <Text style={styles.buttonText}>Iniciar Sesión</Text>
+            </Pressable>
+          </>
+        )}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, padding: 24, justifyContent: 'center', backgroundColor: '#f8fafc' },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#0f172a' },
+  card: { padding: 20, borderRadius: 12, backgroundColor: '#ffffff', elevation: 2, gap: 10 },
+  subtitle: { fontSize: 18, fontWeight: '600', color: '#334155' },
+  text: { fontSize: 15, color: '#475569' },
+  badge: { fontSize: 14, fontWeight: 'bold', color: '#0284c7', marginTop: 4 },
+  button: { marginTop: 12, backgroundColor: '#0284c7', padding: 12, borderRadius: 8, alignItems: 'center' },
+  logoutButton: { backgroundColor: '#dc2626' },
+  buttonText: { color: '#ffffff', fontWeight: '600' },
 });
