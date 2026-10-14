@@ -22,6 +22,7 @@ class plan_salidaSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             'id',
+            'usuario',
             'usuario_nombre',
             'estado_display',
         ]

@@ -24,6 +24,7 @@ class reporte_tecnicoSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             'id',
+            'usuario',
             'usuario_nombre',
         ]
 
