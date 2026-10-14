@@ -5,7 +5,6 @@ from ..models import Observacion
 
 class observacionSerializer(serializers.ModelSerializer):
     usuario_nombre = serializers.ReadOnlyField(source='usuario.username')
-    zona_nombre = serializers.ReadOnlyField(source='zona.nombre')
     fecha_hora = serializers.DateTimeField(required=False)
 
     class Meta:
@@ -14,8 +13,7 @@ class observacionSerializer(serializers.ModelSerializer):
             'id',
             'usuario',
             'usuario_nombre',
-            'zona',
-            'zona_nombre',
+            'coordenadas',
             'titulo',
             'descripcion',
             'foto_url',
@@ -26,7 +24,6 @@ class observacionSerializer(serializers.ModelSerializer):
         read_only_fields = [
             'id',
             'usuario_nombre',
-            'zona_nombre',
         ]
 
     def create(self, validated_data):

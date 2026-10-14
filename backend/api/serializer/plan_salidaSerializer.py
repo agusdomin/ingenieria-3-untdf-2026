@@ -4,7 +4,6 @@ from ..models import PlanSalida
 
 class plan_salidaSerializer(serializers.ModelSerializer):
     usuario_nombre = serializers.ReadOnlyField(source='usuario.username')
-    zona_nombre = serializers.ReadOnlyField(source='zona.nombre')
     estado_display = serializers.CharField(source='get_estado_display', read_only=True)
 
     class Meta:
@@ -13,19 +12,17 @@ class plan_salidaSerializer(serializers.ModelSerializer):
             'id',
             'usuario',
             'usuario_nombre',
-            'zona',
-            'zona_nombre',
             'fecha_hora_inicio',
             'fecha_hora_retorno',
             'cantidad_acompanantes',
             'itinerario_descripcion',
             'estado',
+            'coordenadas',
             'estado_display',
         ]
         read_only_fields = [
             'id',
             'usuario_nombre',
-            'zona_nombre',
             'estado_display',
         ]
 

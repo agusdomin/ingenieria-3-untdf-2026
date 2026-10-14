@@ -1,12 +1,11 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-from .zona import Zona
 
 
 class Observacion(models.Model):
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='observaciones', verbose_name='Usuario')
-    zona = models.ForeignKey(Zona, on_delete=models.CASCADE, related_name='observaciones', verbose_name='Zona')
+    coordenadas = models.JSONField(blank=True, null=True, verbose_name='Coordenadas')
     titulo = models.CharField(blank=True, null=True, max_length=200, verbose_name='Título')
     descripcion = models.TextField(blank=True, null=True, verbose_name='Descripción')
     foto_url = models.URLField(blank=True, null=True, max_length=500, verbose_name='URL de la foto')
@@ -20,4 +19,4 @@ class Observacion(models.Model):
         ordering = ['-fecha_hora']
 
     def __str__(self):
-        return f"{self.titulo} - {self.zona.nombre} ({self.usuario})"
+        return f"{self.titulo or f'Observación #{self.id}'} ({self.usuario})"

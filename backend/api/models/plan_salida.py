@@ -1,6 +1,5 @@
 from django.db import models
 from django.conf import settings
-from .zona import Zona
 
 
 class PlanSalida(models.Model):
@@ -11,7 +10,7 @@ class PlanSalida(models.Model):
         CANCELADO = 'cancelado', 'Cancelado'
 
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='planes_salida', verbose_name='Usuario declarante')
-    zona = models.ForeignKey(Zona, on_delete=models.CASCADE, related_name='planes_salida', verbose_name='Zona')
+    coordenadas = models.JSONField(blank=True, null=True, verbose_name='Coordenadas')
     fecha_hora_inicio = models.DateTimeField(verbose_name='Fecha y hora de inicio')
     fecha_hora_retorno = models.DateTimeField(verbose_name='Fecha y hora de retorno')
     cantidad_acompanantes = models.PositiveIntegerField(default=0, verbose_name='Cantidad de acompañantes')
@@ -24,4 +23,4 @@ class PlanSalida(models.Model):
         ordering = ['-fecha_hora_inicio']
 
     def __str__(self):
-        return f"Plan #{self.id} - {self.usuario} ({self.zona.nombre})"
+        return f"Plan #{self.id} - {self.usuario}"

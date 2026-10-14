@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Usuario, Zona, PlanSalida, Observacion
+from .models import Usuario, PlanSalida, Observacion
 
 
 @admin.register(Usuario)
@@ -15,22 +15,15 @@ class UsuarioAdmin(UserAdmin):
     list_filter = ('rol', 'is_staff', 'is_superuser', 'is_active')
 
 
-@admin.register(Zona)
-class ZonaAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'altura', 'nivel_actual_peligro', 'es_multizona', 'zona_padre', 'creador', 'ultima_actualizacion')
-    list_filter = ('nivel_actual_peligro', 'es_multizona')
-    search_fields = ('nombre', 'descripcion', 'problema_principal')
-
-
 @admin.register(PlanSalida)
 class PlanSalidaAdmin(admin.ModelAdmin):
-    list_display = ('id', 'usuario', 'zona', 'fecha_hora_inicio', 'fecha_hora_retorno', 'cantidad_acompanantes', 'estado')
-    list_filter = ('estado', 'fecha_hora_inicio', 'zona')
-    search_fields = ('usuario__username', 'usuario__nombre', 'zona__nombre', 'itinerario_descripcion')
+    list_display = ('id', 'usuario', 'coordenadas', 'fecha_hora_inicio', 'fecha_hora_retorno', 'cantidad_acompanantes', 'estado')
+    list_filter = ('estado', 'fecha_hora_inicio')
+    search_fields = ('usuario__username', 'usuario__nombre', 'coordenadas', 'itinerario_descripcion')
 
 
 @admin.register(Observacion)
 class ObservacionAdmin(admin.ModelAdmin):
-    list_display = ('titulo', 'usuario', 'zona', 'tipo', 'nivel_relevancia', 'fecha_hora')
-    list_filter = ('tipo', 'nivel_relevancia', 'zona', 'fecha_hora')
-    search_fields = ('titulo', 'descripcion', 'usuario__username', 'zona__nombre')
+    list_display = ('titulo', 'usuario', 'tipo', 'nivel_relevancia', 'fecha_hora')
+    list_filter = ('tipo', 'nivel_relevancia', 'fecha_hora')
+    search_fields = ('titulo', 'descripcion', 'usuario__username')

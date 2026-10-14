@@ -1,7 +1,6 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-from .zona import Zona
 from .reporte_tecnico import ReporteTecnico
 
 
@@ -12,7 +11,7 @@ class Boletin(models.Model):
         ARCHIVADO = 'archivado', 'Archivado'
 
     reporte_tecnico = models.ForeignKey(ReporteTecnico,on_delete=models.CASCADE,related_name='boletines',verbose_name='Reporte técnico base')
-    zona = models.ForeignKey(Zona,on_delete=models.CASCADE,related_name='boletines',verbose_name='Zona')
+    coordenadas = models.JSONField(blank=True, null=True, verbose_name='Coordenadas')
     autor = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.SET_NULL,null=True,blank=True,related_name='boletines_creados',verbose_name='Autor/Pronosticador')
 
     estado = models.CharField(max_length=20,choices=Estado.choices,default=Estado.BORRADOR,verbose_name='Estado de publicación')
@@ -75,10 +74,10 @@ class Boletin(models.Model):
         ordering = ['-fecha_emision']
 
     def save(self, *args, **kwargs):
-        # Asigna automáticamente la zona del reporte técnico si no se especificó manualmente
-        if self.reporte_tecnico and not self.zona_id:
-            self.zona = self.reporte_tecnico.zona
+        # Asigna automáticamente las coordenadas del reporte técnico si no se especificaron manualmente
+        if self.reporte_tecnico and not self.coordenadas:
+            self.coordenadas = self.reporte_tecnico.coordenadas
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Boletín #{self.id} - {self.zona.nombre} (Peligro: {self.nivel_peligro})"
+        return f"Boletín #{self.id} (Peligro: {self.nivel_peligro})"

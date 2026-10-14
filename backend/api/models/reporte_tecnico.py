@@ -1,13 +1,12 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-from .zona import Zona
 from .datos_meteorologicos import DatosMeteorologicos
 
 
 class ReporteTecnico(models.Model):
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='reportes_tecnicos', verbose_name='Usuario elaborador')
-    zona = models.ForeignKey(Zona, on_delete=models.CASCADE, related_name='reportes_tecnicos', verbose_name='Zona')
+    coordenadas = models.JSONField(blank=True, null=True, verbose_name='Coordenadas')
     fecha_hora = models.DateTimeField(default=timezone.now, verbose_name='Fecha y hora')
     nivel_peligro_estimado = models.CharField(blank=True, null=True, max_length=50, verbose_name='Nivel de peligro estimado')
     diagnostico_resumen = models.TextField(blank=True, null=True, verbose_name='Diagnóstico resumen')
@@ -20,4 +19,4 @@ class ReporteTecnico(models.Model):
         ordering = ['-fecha_hora']
 
     def __str__(self):
-        return f"Reporte #{self.id} - {self.zona.nombre} ({self.fecha_hora.strftime('%d/%m/%Y')})"
+        return f"Reporte #{self.id} ({self.fecha_hora.strftime('%d/%m/%Y')})"
