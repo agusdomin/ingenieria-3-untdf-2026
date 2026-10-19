@@ -31,9 +31,9 @@ export const darkTheme = {
     danger: '#EF4444',
     info: '#38BDF8',
 
-    inputBackground: '#111C27',
-    inputBorder: '#2D3B49',
-    inputPlaceholder: '#64748B',
+    inputBackground: '#1B2A38',
+    inputBorder: '#45596B',
+    inputPlaceholder: '#A7B4C2',
 
     navbarBackground: '#101B26',
     navbarBorder: '#223140',
