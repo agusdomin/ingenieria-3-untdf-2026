@@ -8,6 +8,7 @@ export interface ZoneMapProps {
   onZonePress: (zonaId: string) => void;
   mapStyle: 'street' | 'terrain';
   userLocation: { latitude: number; longitude: number } | null;
+  zoomControlTop: number;
 }
 
 export function getZoneColor(riskLevel: string, theme: AppTheme) {
