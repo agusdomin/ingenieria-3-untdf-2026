@@ -32,8 +32,8 @@ export const lightTheme = {
     info: '#0EA5E9',
 
     inputBackground: '#F1F5F9',
-    inputBorder: '#CBD5E1',
-    inputPlaceholder: '#94A3B8',
+    inputBorder: '#AAB8C6',
+    inputPlaceholder: '#64748B',
 
     navbarBackground: '#FFFFFF',
     navbarBorder: '#E2E8F0',
