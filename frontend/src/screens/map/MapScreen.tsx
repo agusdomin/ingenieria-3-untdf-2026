@@ -79,6 +79,7 @@ export function MapScreen() {
           mapStyle={mapStyle}
           onZonePress={handleZonePress}
           userLocation={userLocation}
+          zoomControlTop={insets.top + 156}
         />
       </View>
 
@@ -118,7 +119,7 @@ export function MapScreen() {
               Zonas de Ushuaia
             </Text>
             <Text style={[styles.areaMeta, { color: theme.colors.textMuted }]}>
-              {features.length} {features.length === 1 ? 'zona' : 'zonas'} · {mapStyle === 'terrain' ? 'OpenTopoMap' : 'OpenStreetMap'} · © OpenStreetMap contributors
+              {features.length} {features.length === 1 ? 'zona' : 'zonas'} · © OpenStreetMap contributors{mapStyle === 'terrain' ? ' · © OpenTopoMap' : ''}
             </Text>
           </View>
           <View style={styles.statusRow}>

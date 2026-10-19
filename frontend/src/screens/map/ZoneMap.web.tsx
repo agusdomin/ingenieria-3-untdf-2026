@@ -6,7 +6,7 @@ import { useTheme } from '../../theme/useTheme';
 import { getZoneColor, getZoneCoordinates } from './zoneMap.types';
 import type { ZoneMapProps } from './zoneMap.types';
 
-export function ZoneMap({ features, onZonePress, mapStyle, userLocation }: ZoneMapProps) {
+export function ZoneMap({ features, onZonePress, mapStyle, userLocation, zoomControlTop }: ZoneMapProps) {
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState(false);
@@ -23,8 +23,17 @@ export function ZoneMap({ features, onZonePress, mapStyle, userLocation }: ZoneM
         const L = await import('leaflet');
         if (disposed || !containerRef.current) return;
 
-        map = L.map(containerRef.current).setView([-54.745, -68.275], 10);
+        map = L.map(containerRef.current, {
+          attributionControl: false,
+          zoomControl: false,
+        }).setView([-54.745, -68.275], 10);
         const currentMap = map;
+        const zoomControl = L.control.zoom({ position: 'topleft' }).addTo(currentMap);
+        const zoomControlPosition = zoomControl.getContainer()?.parentElement;
+        if (zoomControlPosition) {
+          zoomControlPosition.style.top = `${zoomControlTop}px`;
+          zoomControlPosition.style.left = '12px';
+        }
 
         const tileUrl = mapStyle === 'terrain'
           ? 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
@@ -88,7 +97,7 @@ export function ZoneMap({ features, onZonePress, mapStyle, userLocation }: ZoneM
       resizeObserver?.disconnect();
       map?.remove();
     };
-  }, [features, mapStyle, onZonePress, theme, userLocation]);
+  }, [features, mapStyle, onZonePress, theme, userLocation, zoomControlTop]);
 
   return (
     <div style={{ flex: 1, minHeight: 240, position: 'relative', display: 'flex' }}>
