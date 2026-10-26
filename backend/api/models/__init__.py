@@ -6,6 +6,7 @@ from .reporte_tecnico import ReporteTecnico
 from .valoracion import Valoracion
 from .datos_meteorologicos import DatosMeteorologicos
 from .boletin import Boletin
+from .certificacion import Certificacion
 
 __all__ = [
     'Usuario',
@@ -15,4 +16,6 @@ __all__ = [
     'Valoracion',
     'DatosMeteorologicos',
     'Boletin',
+    'Certificacion',
 ]
+

@@ -5,6 +5,7 @@ from .observacionViewSet import ObservacionViewSet
 from .reporte_tecnicoViewSet import ReporteTecnicoViewSet
 from .valoracionViewSet import ValoracionViewSet
 from .datos_meteorologicosViewSet import DatosMeteorologicosViewSet
+from .certificacionViewSet import CertificacionViewSet
 
 __all__ = [
     'UsuarioViewSet',
@@ -13,4 +14,6 @@ __all__ = [
     'ReporteTecnicoViewSet',
     'ValoracionViewSet',
     'DatosMeteorologicosViewSet',
+    'CertificacionViewSet',
 ]
+

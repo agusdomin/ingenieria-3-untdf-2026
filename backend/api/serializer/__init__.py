@@ -6,6 +6,7 @@ from .reporte_tecnicoSerializer import reporte_tecnicoSerializer
 from .valoracionSerializer import valoracionSerializer
 from .datos_meteorologicosSerializer import datos_meteorologicosSerializer
 from .datosCampoSerializer import datosCampoSerializer
+from .certificacionSerializer import certificacionSerializer
 
 __all__ = [
     'usuarioSerializer',
@@ -15,4 +16,6 @@ __all__ = [
     'valoracionSerializer',
     'datos_meteorologicosSerializer',
     'datosCampoSerializer',
+    'certificacionSerializer',
 ]
+

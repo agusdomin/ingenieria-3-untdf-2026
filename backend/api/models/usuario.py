@@ -8,7 +8,6 @@ class Usuario(AbstractUser):
         EXPERTO = 'experto', 'Experto'
 
     nombre = models.CharField(max_length=150, blank=True, null=True, verbose_name='Nombre')
-    certificacion = models.CharField(max_length=255, blank=True, null=True, verbose_name='Certificación')
     rol = models.CharField(
         max_length=20,
         choices=Rol.choices,

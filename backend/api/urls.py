@@ -7,6 +7,7 @@ from .viewsets import (
     ReporteTecnicoViewSet,
     ValoracionViewSet,
     DatosMeteorologicosViewSet,
+    CertificacionViewSet,
 )
 from .auth_views import (
     LoginView,
@@ -22,6 +23,8 @@ router.register(r'observaciones', ObservacionViewSet, basename='observaciones')
 router.register(r'reportes-tecnicos', ReporteTecnicoViewSet, basename='reportes-tecnicos')
 router.register(r'valoraciones', ValoracionViewSet, basename='valoraciones')
 router.register(r'datos-meteorologicos', DatosMeteorologicosViewSet, basename='datos-meteorologicos')
+router.register(r'certificaciones', CertificacionViewSet, basename='certificaciones')
+
 
 urlpatterns = [
     # Autenticación

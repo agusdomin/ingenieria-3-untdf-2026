@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from ..models import Usuario
+from .certificacionSerializer import certificacionSerializer
 
 
 class usuarioSerializer(serializers.ModelSerializer):
@@ -12,6 +13,10 @@ class usuarioSerializer(serializers.ModelSerializer):
         source='get_rol_display',
         read_only=True
     )
+    certificaciones = certificacionSerializer(
+        many=True,
+        read_only=True
+    )
 
     class Meta:
         model = Usuario
@@ -20,14 +25,15 @@ class usuarioSerializer(serializers.ModelSerializer):
             'username',
             'email',
             'nombre',
-            'certificacion',
+            'certificaciones',
             'rol',
             'rol_display',
             'is_active',
             'date_joined',
             'password',
         ]
-        read_only_fields = ['id', 'date_joined', 'rol_display']
+        read_only_fields = ['id', 'date_joined', 'rol_display', 'certificaciones']
+
         extra_kwargs = {
             'email': {'required': True},
         }
