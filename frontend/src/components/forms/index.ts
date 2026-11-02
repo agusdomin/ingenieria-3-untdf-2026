@@ -6,3 +6,4 @@ export { AppTimePicker } from './AppTimePicker';
 export { AppTextArea } from './AppTextArea';
 export { RadioGroup } from './RadioGroup';
 export type { RadioOption } from './RadioGroup';
+export { ControlledField } from './ControlledField';
