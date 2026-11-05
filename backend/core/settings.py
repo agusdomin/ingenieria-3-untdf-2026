@@ -149,3 +149,9 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
+# Configuración de Open-Meteo
+OPEN_METEO_BASE_URL = os.getenv('OPEN_METEO_BASE_URL', 'https://api.open-meteo.com/v1/forecast')
+OPEN_METEO_DEFAULT_LATITUDE = float(os.getenv('OPEN_METEO_DEFAULT_LATITUDE', '-54.8019'))
+OPEN_METEO_DEFAULT_LONGITUDE = float(os.getenv('OPEN_METEO_DEFAULT_LONGITUDE', '-68.3030'))
+OPEN_METEO_CACHE_MINUTES = int(os.getenv('OPEN_METEO_CACHE_MINUTES', '60'))
+OPEN_METEO_TIMEZONE = os.getenv('OPEN_METEO_TIMEZONE', 'America/Argentina/Ushuaia')
