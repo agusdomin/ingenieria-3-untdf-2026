@@ -1,19 +1,23 @@
-from django.utils import timezone
 from rest_framework import serializers
 from ..models import DatosMeteorologicos
+from ..services.open_meteo import OpenMeteoService, OpenMeteoServiceError
 
 
 class datos_meteorologicosSerializer(serializers.ModelSerializer):
-    fecha_hora = serializers.DateTimeField(required=False)
+    latitud = serializers.FloatField(required=False, allow_null=True)
+    longitud = serializers.FloatField(required=False, allow_null=True)
 
     class Meta:
         model = DatosMeteorologicos
         fields = [
             'id',
+            'latitud',
+            'longitud',
             'temperatura',
             'precipitaciones',
             'fecha_hora',
-            'nieve',
+            'nieve_fresca',
+            'espesor_nieve',
             'velocidad_viento',
             'direccion_viento',
             'rafaga',
@@ -21,10 +25,25 @@ class datos_meteorologicosSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             'id',
+            'temperatura',
+            'precipitaciones',
+            'fecha_hora',
+            'nieve_fresca',
+            'espesor_nieve',
+            'velocidad_viento',
+            'direccion_viento',
+            'rafaga',
+            'humedad',
         ]
 
     def create(self, validated_data):
-        # Si no viene fecha al crear la medición, se le asigna la actual
-        if not validated_data.get('fecha_hora'):
-            validated_data['fecha_hora'] = timezone.now()
-        return super().create(validated_data)
+        latitud = validated_data.get('latitud')
+        longitud = validated_data.get('longitud')
+        try:
+            instancia, _ = OpenMeteoService.obtener_o_consultar(
+                latitud=latitud,
+                longitud=longitud
+            )
+            return instancia
+        except OpenMeteoServiceError as e:
+            raise serializers.ValidationError({'detail': str(e)})
