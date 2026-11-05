@@ -8,11 +8,11 @@ import {
 export const getObservations =
   async (): Promise<Observation[]> => {
     const response =
-      await api.get('/observations');
+      await api.get('/observaciones');
 
     return response.data;
   };
-
+/*
 export const getObservationsByZone =
   async (
     zoneId: string
@@ -23,7 +23,7 @@ export const getObservationsByZone =
       );
 
     return response.data;
-  };
+  };*/
 
 export const createObservation =
   async (
@@ -31,7 +31,7 @@ export const createObservation =
   ): Promise<Observation> => {
     const response =
       await api.post(
-        '/observations',
+        '/observaciones',
         data
       );
 

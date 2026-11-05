@@ -10,8 +10,8 @@ import {
     createReport,
     getReport,
     getReports,
-    getReportsByZone,
-    rateReport,
+    //getReportsByZone,
+    //rateReport,
   } from '../services/reports.service';
   
   export const useReports =
@@ -38,7 +38,7 @@ import {
       enabled: Boolean(id),
     });
   };
-  
+  /*
   export const useReportsByZone =
     (
       zoneId: string
@@ -56,7 +56,7 @@ import {
   
         enabled: Boolean(zoneId),
       });
-    };
+    };*/
   
   export const useCreateReport =
     () => {
@@ -74,7 +74,7 @@ import {
             queryKey:
               queryKeys.reports.all,
           });
-  
+  /*
           queryClient.invalidateQueries({
             queryKey:
               queryKeys.reports.byZone(
@@ -85,11 +85,11 @@ import {
           queryClient.invalidateQueries({
             queryKey:
               queryKeys.analyses.all,
-          });
+          });*/
         },
       });
     };
-  
+  /*
   export const useRateReport =
     () => {
       const queryClient =
@@ -111,4 +111,4 @@ import {
           });
         },
       });
-    };
+    };*/

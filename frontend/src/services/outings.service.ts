@@ -3,8 +3,15 @@ import { api } from '../api/client';
 import {
   CreateOutingDTO,
   Outing,
-  TrafficLevel,
 } from '../types/outing';
+
+export const getOutings =
+  async (): Promise<Outing[]> => {
+    const response =
+      await api.get('/planes-salida');
+
+    return response.data;
+  };
 
 export const createOuting =
   async (
@@ -12,13 +19,13 @@ export const createOuting =
   ): Promise<Outing> => {
     const response =
       await api.post(
-        '/outings',
+        '/planes-salida',
         data
       );
 
     return response.data;
   };
-
+/*
 export const getOutingsByZone =
   async (
     zoneId: string
@@ -41,4 +48,4 @@ export const getTrafficByZone =
       );
 
     return response.data;
-  };
+  };*/

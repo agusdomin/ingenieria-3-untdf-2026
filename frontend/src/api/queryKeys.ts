@@ -1,7 +1,7 @@
 export const queryKeys = {
     zones: {
       all: ['zones'] as const,
-  
+
       detail: (id: string) =>
         ['zones', id] as const,
     },
@@ -11,9 +11,6 @@ export const queryKeys = {
   
       detail: (id: string) =>
         ['observations', id] as const,
-  
-      byZone: (zoneId: string) =>
-        ['observations', 'zone', zoneId] as const,
     },
   
     reports: {
@@ -21,27 +18,14 @@ export const queryKeys = {
   
       detail: (id: string) =>
         ['reports', id] as const,
-  
-      byZone: (zoneId: string) =>
-        ['reports', 'zone', zoneId] as const,
-    },
-  
-    analyses: {
-      all: ['analyses'] as const,
-  
-      detail: (id: string) =>
-        ['analyses', id] as const,
     },
   
     outings: {
-      all: ['outings'] as const,
-  
-      byZone: (zoneId: string) =>
-        ['outings', 'zone', zoneId] as const,
-  
-      traffic: (zoneId: string) =>
-        ['traffic', zoneId] as const,
-    },
+  all: ['outings'] as const,
+
+  detail: (id: string) =>
+    ['outings', 'detail', id] as const,
+},
   
     auth: {
       user: ['auth', 'user'] as const,
