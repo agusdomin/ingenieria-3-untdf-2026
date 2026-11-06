@@ -1,38 +1,40 @@
-export type ObservationType =
-  | 'nieve'
-  | 'indicio_avalancha'
-  | 'terreno'
-  | 'peligro'
-  | 'otra';
-
-export interface Observation {
-  id: string;
-
-  zoneId: string;
-
+export interface Coordinates {
   latitude: number;
   longitude: number;
+}
 
-  type: ObservationType;
+export interface Observation {
+  id: number;
 
-  description: string;
+  usuario: number;
+  usuario_nombre: string;
 
-  imageUrl?: string;
+  coordenadas: Coordinates | null;
 
-  createdAt: string;
+  titulo: string | null;
+  descripcion: string | null;
 
-  createdBy: string;
+  foto_url: string | null;
+
+  fecha_hora: string;
+
+  tipo: string;
+
+  nivel_relevancia: string | null;
 }
 
 export interface CreateObservationDTO {
-  zoneId: string;
+  coordenadas?: Coordinates;
 
-  latitude: number;
-  longitude: number;
+  titulo?: string;
 
-  type: ObservationType;
+  descripcion?: string;
 
-  description: string;
+  foto_url?: string;
 
-  imageUrl?: string;
+  fecha_hora?: string;
+
+  tipo: string;
+
+  nivel_relevancia?: string;
 }

@@ -3,13 +3,13 @@ import { api } from '../api/client';
 import {
   CreateReportDTO,
   Report,
-  ReportRating,
+  //ReportRating,
 } from '../types/report';
 
 export const getReports =
   async (): Promise<Report[]> => {
     const response =
-      await api.get('/reports');
+      await api.get('/reportes-tecnicos');
 
     return response.data;
   };
@@ -20,12 +20,12 @@ export const getReport =
   ): Promise<Report> => {
     const response =
       await api.get(
-        `/reports/${id}`
+        `/reportes-tecnicos/${id}`
       );
 
     return response.data;
   };
-
+/*
 export const getReportsByZone =
   async (
     zoneId: string
@@ -36,7 +36,7 @@ export const getReportsByZone =
       );
 
     return response.data;
-  };
+  };*/
 
 export const createReport =
   async (
@@ -44,27 +44,8 @@ export const createReport =
   ): Promise<Report> => {
     const response =
       await api.post(
-        '/reports',
+        '/reportes-tecnicos',
         data
-      );
-
-    return response.data;
-  };
-
-export const rateReport =
-  async ({
-    reportId,
-    rating,
-  }: {
-    reportId: string;
-    rating: ReportRating;
-  }) => {
-    const response =
-      await api.post(
-        `/reports/${reportId}/rating`,
-        {
-          rating,
-        }
       );
 
     return response.data;

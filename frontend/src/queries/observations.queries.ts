@@ -9,7 +9,7 @@ import {
   import {
     createObservation,
     getObservations,
-    getObservationsByZone,
+    //getObservationsByZone,
   } from '../services/observations.service';
   
   export const useObservations =
@@ -22,7 +22,7 @@ import {
           getObservations,
       });
     };
-  
+  /*
   export const useObservationsByZone =
     (
       zoneId: string
@@ -41,7 +41,7 @@ import {
         enabled: Boolean(zoneId),
       });
     };
-  
+  */
   export const useCreateObservation =
     () => {
       const queryClient =
@@ -51,20 +51,18 @@ import {
         mutationFn:
           createObservation,
   
-        onSuccess: (
-          observation
-        ) => {
+        onSuccess: () => {
           queryClient.invalidateQueries({
             queryKey:
               queryKeys.observations.all,
           });
-  
+  /*
           queryClient.invalidateQueries({
             queryKey:
               queryKeys.observations.byZone(
                 observation.zoneId
               ),
-          });
+          });*/
         },
       });
     };

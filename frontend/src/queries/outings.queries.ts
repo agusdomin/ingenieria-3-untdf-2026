@@ -8,10 +8,20 @@ import {
   
   import {
     createOuting,
-    getOutingsByZone,
-    getTrafficByZone,
+    getOutings,
+    //getOutingsByZone,
+    //getTrafficByZone,
   } from '../services/outings.service';
   
+  export const useOutings = () => {
+  return useQuery({
+    queryKey:
+      queryKeys.outings.all,
+    queryFn:
+      getOutings,
+  });
+};
+/*
   export const useOutingsByZone =
     (
       zoneId: string
@@ -52,32 +62,20 @@ import {
           1000 * 60,
       });
     };
-  
-  export const useCreateOuting =
-    () => {
-      const queryClient =
-        useQueryClient();
-  
-      return useMutation({
-        mutationFn:
-          createOuting,
-  
-        onSuccess: (
-          outing
-        ) => {
-          queryClient.invalidateQueries({
-            queryKey:
-              queryKeys.outings.byZone(
-                outing.zoneId
-              ),
-          });
-  
-          queryClient.invalidateQueries({
-            queryKey:
-              queryKeys.outings.traffic(
-                outing.zoneId
-              ),
-          });
-        },
+  */
+  export const useCreateOuting = () => {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation({
+    mutationFn:
+      createOuting,
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey:
+          queryKeys.outings.all,
       });
-    };
+    },
+  });
+};
