@@ -5,6 +5,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -19,7 +20,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { zonesGeoJSON } from '../../mocks/zones.mock';
 import { useNetwork } from '../../network/NetworkContext';
 import { useTheme } from '../../theme/useTheme';
-import { ZoneMap } from './ZoneMap';
+import { MapContainer } from '../../components/map/MapContainer';
+import { getZoneColor, type ZoneFeature } from './zoneMap.types';
 
 type Coordinate = { latitude: number; longitude: number };
 
@@ -29,7 +31,9 @@ export function MapScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
-  const [mapStyle, setMapStyle] = useState<'street' | 'terrain'>('street');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [focusBounds, setFocusBounds] = useState<[number, number, number, number]>();
+  const [mapStyle, setMapStyle] = useState<'street' | 'terrain'>('terrain');
   const [userLocation, setUserLocation] = useState<Coordinate | null>(null);
   const [locating, setLocating] = useState(false);
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
@@ -41,6 +45,16 @@ export function MapScreen() {
       feature.properties.name.toLocaleLowerCase().includes(query)
     );
   }, [search]);
+
+  function selectSearchResult(feature: ZoneFeature) {
+    const coordinates = feature.geometry.coordinates.flat();
+    const longitudes = coordinates.map(([longitude]) => longitude);
+    const latitudes = coordinates.map(([, latitude]) => latitude);
+    setFocusBounds([Math.min(...longitudes), Math.min(...latitudes), Math.max(...longitudes), Math.max(...latitudes)]);
+    setSearch(feature.properties.name);
+    setSearchOpen(false);
+    Keyboard.dismiss();
+  }
 
   const handleZonePress = useCallback((zonaId: string) => {
     Keyboard.dismiss();
@@ -60,6 +74,7 @@ export function MapScreen() {
       const position = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
+      setFocusBounds(undefined);
       setUserLocation({
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
@@ -74,8 +89,9 @@ export function MapScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       <View style={StyleSheet.absoluteFill}>
-        <ZoneMap
-          features={features}
+        <MapContainer
+          features={zonesGeoJSON.features}
+          focusBounds={focusBounds}
           mapStyle={mapStyle}
           onZonePress={handleZonePress}
           userLocation={userLocation}
@@ -94,12 +110,19 @@ export function MapScreen() {
             <TextInput
               accessibilityLabel="Buscar zona"
               value={search}
-              onChangeText={setSearch}
+              onChangeText={(value) => { setSearch(value); setSearchOpen(true); }}
+              onFocus={() => setSearchOpen(true)}
+              onSubmitEditing={() => { if (features.length === 1) selectSearchResult(features[0]); }}
               placeholder="Buscar zona"
               placeholderTextColor={theme.colors.inputPlaceholder}
               returnKeyType="search"
               style={[styles.searchInput, { color: theme.colors.textPrimary }]}
             />
+            {search.length > 0 && (
+              <Pressable accessibilityRole="button" accessibilityLabel="Borrar búsqueda" hitSlop={8} onPress={() => { setSearch(''); setSearchOpen(false); }}>
+                <Text style={{ color: theme.colors.textPrimary, fontSize: 24 }}>×</Text>
+              </Pressable>
+            )}
             <Pressable
               accessibilityLabel="Iniciar sesión"
               accessibilityRole="button"
@@ -114,6 +137,21 @@ export function MapScreen() {
               />
             </Pressable>
           </View>
+          {searchOpen && search.trim().length > 0 && (
+            <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 200 }}>
+              {features.length === 0 ? (
+                <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.textSecondary, paddingVertical: 12 }}>No se encontraron zonas</Text>
+              ) : features.map((feature) => (
+                <Pressable key={feature.properties.id} accessibilityRole="button" accessibilityLabel={`Centrar ${feature.properties.name}`} onPress={() => selectSearchResult(feature)} style={{ paddingVertical: 12, minHeight: 48 }}>
+                  <Text style={{ color: theme.colors.textPrimary, fontWeight: '600' }}>{feature.properties.name}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={[styles.statusDot, { backgroundColor: getZoneColor(feature.properties.riskLevel, theme) }]} />
+                    <Text style={{ color: theme.colors.textSecondary, textTransform: 'capitalize' }}>Riesgo {feature.properties.riskLevel}</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
           <View style={styles.locationHeading}>
             <Text numberOfLines={1} style={[styles.areaTitle, { color: theme.colors.textPrimary }]}>
               Zonas de Ushuaia
@@ -281,7 +319,7 @@ function MapControl({ label, icon, active, onPress }: MapControlProps) {
 const styles = StyleSheet.create({
   screen: { flex: 1, overflow: 'hidden' },
   overlay: {
-    zIndex: 2,
+    zIndex: 4,
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 9,

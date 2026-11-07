@@ -1,7 +1,7 @@
-import type { zonesGeoJSON } from '../../mocks/zones.mock';
+import type { RiskZoneFeature } from '../../components/map/RiskPolygonLayer.types';
 import type { AppTheme, RiskLevel } from '../../theme/types';
 
-export type ZoneFeature = (typeof zonesGeoJSON.features)[number];
+export type ZoneFeature = RiskZoneFeature;
 
 export interface ZoneMapProps {
   features: ZoneFeature[];

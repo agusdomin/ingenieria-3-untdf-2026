@@ -1,23 +1,34 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 
 import { useTheme } from '../../theme/useTheme';
 import { getZoneColor, getZoneCoordinates } from './zoneMap.types';
-import type { ZoneMapProps } from './zoneMap.types';
+import { INITIAL_CENTER, INITIAL_ZOOM, type MapContainerProps } from '../../components/map/MapContainer.types';
 
 type MapState = 'loading' | 'ready' | 'tiles-error' | 'engine-error';
-type MapMessage = { type: 'ready' | 'tiles-ready' | 'tile-error' | 'engine-error' | 'zone-press'; id?: string };
+type MapMessage = { type: 'ready' | 'tiles-ready' | 'tile-error' | 'engine-error' | 'zone-press'; id?: string }
+  | { type: 'map-press'; coordinate: [number, number] }
+  | { type: 'camera-change'; center: [number, number]; zoom: number };
 
-export function ZoneMap({ features, onZonePress, mapStyle, userLocation, zoomControlTop }: ZoneMapProps) {
+export function ZoneMap({ features, focusBounds, onZonePress, mapStyle, userLocation, zoomControlTop, onLoad, onError, onMapPress, onCameraChange }: MapContainerProps) {
   const { theme } = useTheme();
   const [mapState, setMapState] = useState<MapState>('loading');
+  const webView = useRef<WebView>(null);
+  const focusScript = focusBounds
+    ? `window.focusZone?.(${JSON.stringify(focusBounds)}); true;`
+    : 'true;';
+  useEffect(() => {
+    webView.current?.injectJavaScript(focusScript);
+  }, [focusScript, focusBounds]);
 
   const html = useMemo(() => {
     const payload = JSON.stringify({
       mapStyle,
       userLocation,
       zoomControlTop,
+      initialCenter: INITIAL_CENTER,
+      initialZoom: INITIAL_ZOOM,
       features: features.map((feature) => ({
         id: feature.properties.id,
         name: feature.properties.name,
@@ -50,7 +61,18 @@ export function ZoneMap({ features, onZonePress, mapStyle, userLocation, zoomCon
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" onerror="report({type:'engine-error'})"></script>
   <script>
     try {
-      const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([-54.745, -68.275], 10);
+      const map = L.map('map', { zoomControl: false, attributionControl: true }).setView([DATA.initialCenter[1], DATA.initialCenter[0]], DATA.initialZoom);
+      window.focusZone = ([west, south, east, north]) => {
+        map.invalidateSize();
+        map.flyToBounds([[south, west], [north, east]], {
+          paddingTopLeft: [72, DATA.zoomControlTop + 32], paddingBottomRight: [72, 120], maxZoom: 16, duration: 0.6
+        });
+      };
+      map.on('click', (event) => report({ type: 'map-press', coordinate: [event.latlng.lng, event.latlng.lat] }));
+      map.on('moveend', () => {
+        const center = map.getCenter();
+        report({ type: 'camera-change', center: [center.lng, center.lat], zoom: map.getZoom() });
+      });
       L.control.zoom({ position: 'topleft' }).addTo(map);
       const isTerrain = DATA.mapStyle === 'terrain';
       const tileUrl = isTerrain
@@ -89,8 +111,6 @@ export function ZoneMap({ features, onZonePress, mapStyle, userLocation, zoomCon
           fillOpacity: 1
         }).addTo(map).bindTooltip('Tu ubicación');
         map.setView([DATA.userLocation.latitude, DATA.userLocation.longitude], 13);
-      } else if (polygons.length) {
-        map.fitBounds(L.featureGroup(polygons).getBounds(), { padding: [32, 32], maxZoom: 12 });
       }
 
       setTimeout(() => map.invalidateSize(true), 250);
@@ -108,10 +128,19 @@ export function ZoneMap({ features, onZonePress, mapStyle, userLocation, zoomCon
       const message = JSON.parse(event.nativeEvent.data) as MapMessage;
       if (message.type === 'ready' || message.type === 'tiles-ready') {
         setMapState('ready');
+        if (message.type === 'ready') {
+          onLoad?.();
+          webView.current?.injectJavaScript(focusScript);
+        }
       } else if (message.type === 'tile-error') {
         setMapState((current) => current === 'ready' ? current : 'tiles-error');
       } else if (message.type === 'engine-error') {
         setMapState('engine-error');
+        onError?.();
+      } else if (message.type === 'map-press') {
+        onMapPress?.(message.coordinate);
+      } else if (message.type === 'camera-change') {
+        onCameraChange?.({ center: message.center, zoom: message.zoom });
       } else if (message.type === 'zone-press' && message.id) {
         onZonePress(message.id);
       }
@@ -131,6 +160,7 @@ export function ZoneMap({ features, onZonePress, mapStyle, userLocation, zoomCon
   return (
     <View style={styles.container}>
       <WebView
+        ref={webView}
         key={html}
         originWhitelist={['*']}
         source={{ html, baseUrl: 'https://localhost' }}

@@ -4,12 +4,22 @@ import 'leaflet/dist/leaflet.css';
 
 import { useTheme } from '../../theme/useTheme';
 import { getZoneColor, getZoneCoordinates } from './zoneMap.types';
-import type { ZoneMapProps } from './zoneMap.types';
+import { INITIAL_CENTER, INITIAL_ZOOM, type MapContainerProps } from '../../components/map/MapContainer.types';
 
-export function ZoneMap({ features, onZonePress, mapStyle, userLocation, zoomControlTop }: ZoneMapProps) {
+export function ZoneMap({ features, focusBounds, onZonePress, mapStyle, userLocation, zoomControlTop, onLoad, onError, onMapPress, onCameraChange }: MapContainerProps) {
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState(false);
+  const mapRef = useRef<LeafletMap | null>(null);
+  const [mapVersion, setMapVersion] = useState(0);
+
+  useEffect(() => {
+    if (!focusBounds || !mapRef.current) return;
+    const [west, south, east, north] = focusBounds;
+    mapRef.current.flyToBounds([[south, west], [north, east]], {
+      paddingTopLeft: [72, zoomControlTop + 32], paddingBottomRight: [72, 120], maxZoom: 16, duration: 0.6,
+    });
+  }, [focusBounds, mapVersion, zoomControlTop]);
 
   useEffect(() => {
     let disposed = false;
@@ -22,12 +32,15 @@ export function ZoneMap({ features, onZonePress, mapStyle, userLocation, zoomCon
       try {
         const L = await import('leaflet');
         if (disposed || !containerRef.current) return;
+        setError(false);
 
         map = L.map(containerRef.current, {
-          attributionControl: false,
+          attributionControl: true,
           zoomControl: false,
-        }).setView([-54.745, -68.275], 10);
+        }).setView([INITIAL_CENTER[1], INITIAL_CENTER[0]], INITIAL_ZOOM);
         const currentMap = map;
+        mapRef.current = currentMap;
+        setMapVersion((version) => version + 1);
         const zoomControl = L.control.zoom({ position: 'topleft' }).addTo(currentMap);
         const zoomControlPosition = zoomControl.getContainer()?.parentElement;
         if (zoomControlPosition) {
@@ -39,13 +52,13 @@ export function ZoneMap({ features, onZonePress, mapStyle, userLocation, zoomCon
           ? 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
           : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
         L.tileLayer(tileUrl, {
-          maxZoom: 19,
+          maxZoom: mapStyle === 'terrain' ? 17 : 19,
           attribution: mapStyle === 'terrain'
             ? 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://opentopomap.org">OpenTopoMap</a>'
             : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         }).addTo(currentMap);
 
-        const polygons = features.map((feature) => {
+        features.forEach((feature) => {
           const coordinates = getZoneCoordinates(feature).map(
             ({ latitude, longitude }): [number, number] => [latitude, longitude]
           );
@@ -59,7 +72,6 @@ export function ZoneMap({ features, onZonePress, mapStyle, userLocation, zoomCon
           label.textContent = `${feature.properties.name} · ${feature.properties.riskLevel}`;
           polygon.bindTooltip(label);
           polygon.on('click', () => onZonePress(feature.properties.id));
-          return polygon;
         });
 
         if (userLocation) {
@@ -75,29 +87,29 @@ export function ZoneMap({ features, onZonePress, mapStyle, userLocation, zoomCon
           currentMap.setView([userLocation.latitude, userLocation.longitude], 13);
         }
 
-        if (!userLocation && polygons.length > 0) {
-          currentMap.fitBounds(L.featureGroup(polygons).getBounds(), {
-            padding: [32, 32],
-            maxZoom: 12,
-          });
-        }
+        currentMap.on('click', (event) => onMapPress?.([event.latlng.lng, event.latlng.lat]));
+        currentMap.on('moveend', () => {
+          const center = currentMap.getCenter();
+          onCameraChange?.({ center: [center.lng, center.lat], zoom: currentMap.getZoom() });
+        });
+        onLoad?.();
 
         resizeObserver = new ResizeObserver(() => currentMap.invalidateSize());
         resizeObserver.observe(containerRef.current);
       } catch {
-        if (!disposed) setError(true);
+        if (!disposed) { setError(true); onError?.(); }
       }
     }
 
-    setError(false);
     void createMap();
 
     return () => {
       disposed = true;
       resizeObserver?.disconnect();
       map?.remove();
+      mapRef.current = null;
     };
-  }, [features, mapStyle, onZonePress, theme, userLocation, zoomControlTop]);
+  }, [features, mapStyle, onZonePress, theme, userLocation, zoomControlTop, onLoad, onError, onMapPress, onCameraChange]);
 
   return (
     <div style={{ flex: 1, minHeight: 240, position: 'relative', display: 'flex' }}>
