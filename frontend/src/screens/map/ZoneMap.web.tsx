@@ -39,13 +39,19 @@ export function ZoneMap({ features, focusBounds, onZonePress, mapStyle, userLoca
           zoomControl: false,
         }).setView([INITIAL_CENTER[1], INITIAL_CENTER[0]], INITIAL_ZOOM);
         const currentMap = map;
+        currentMap.attributionControl.setPrefix(false);
         mapRef.current = currentMap;
         setMapVersion((version) => version + 1);
-        const zoomControl = L.control.zoom({ position: 'topleft' }).addTo(currentMap);
+        const zoomControl = L.control.zoom({ position: 'topright' }).addTo(currentMap);
+        const zoomControlElement = zoomControl.getContainer();
+        if (zoomControlElement) {
+          zoomControlElement.style.margin = '0';
+          zoomControlElement.style.transform = 'translateX(50%)';
+        }
         const zoomControlPosition = zoomControl.getContainer()?.parentElement;
         if (zoomControlPosition) {
           zoomControlPosition.style.top = `${zoomControlTop}px`;
-          zoomControlPosition.style.left = '12px';
+          zoomControlPosition.style.right = '35px';
         }
 
         const tileUrl = mapStyle === 'terrain'
@@ -54,7 +60,7 @@ export function ZoneMap({ features, focusBounds, onZonePress, mapStyle, userLoca
         L.tileLayer(tileUrl, {
           maxZoom: mapStyle === 'terrain' ? 17 : 19,
           attribution: mapStyle === 'terrain'
-            ? 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://opentopomap.org">OpenTopoMap</a>'
+            ? '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> · SRTM | <a href="https://opentopomap.org/about">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
             : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         }).addTo(currentMap);
 

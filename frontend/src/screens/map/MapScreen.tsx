@@ -14,16 +14,15 @@ import {
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import type { SymbolViewProps } from 'expo-symbols';
-import * as Location from 'expo-location';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { zonesGeoJSON } from '../../mocks/zones.mock';
 import { useNetwork } from '../../network/NetworkContext';
 import { useTheme } from '../../theme/useTheme';
 import { MapContainer } from '../../components/map/MapContainer';
+import { useLocation } from '../../hooks/useLocation';
 import { getZoneColor, type ZoneFeature } from './zoneMap.types';
 
-type Coordinate = { latitude: number; longitude: number };
 
 export function MapScreen() {
   const { theme } = useTheme();
@@ -34,9 +33,14 @@ export function MapScreen() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [focusBounds, setFocusBounds] = useState<[number, number, number, number]>();
   const [mapStyle, setMapStyle] = useState<'street' | 'terrain'>('terrain');
-  const [userLocation, setUserLocation] = useState<Coordinate | null>(null);
-  const [locating, setLocating] = useState(false);
-  const [locationMessage, setLocationMessage] = useState<string | null>(null);
+  const { latitude, longitude, loading: locating, error, isFallback, retry } = useLocation();
+  const [locationNoticeDismissed, setLocationNoticeDismissed] = useState(false);
+  const [mapResetVersion, setMapResetVersion] = useState(0);
+  const [bottomControlsHeight, setBottomControlsHeight] = useState(54);
+  const userLocation = useMemo(() => (
+    isFallback || latitude === null || longitude === null || locating ? null : { latitude, longitude }
+  ), [latitude, longitude, locating, isFallback]);
+  const locationMessage = !locating ? error : null;
   const [showSafetyNotice, setShowSafetyNotice] = useState(false);
 
   const features = useMemo(() => {
@@ -62,40 +66,24 @@ export function MapScreen() {
   }, [router]);
 
   const locateMe = useCallback(async () => {
-    setLocating(true);
-    setLocationMessage(null);
-    try {
-      const permission = await Location.requestForegroundPermissionsAsync();
-      if (!permission.granted) {
-        setLocationMessage('Permiso de ubicación denegado');
-        return;
-      }
-
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      setFocusBounds(undefined);
-      setUserLocation({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      });
-    } catch {
-      setLocationMessage('No se pudo obtener tu ubicación');
-    } finally {
-      setLocating(false);
-    }
-  }, []);
+    setLocationNoticeDismissed(false);
+    setFocusBounds(undefined);
+    await retry();
+    // Reiniciar la cámara también cuando no hay una posición real que la recentre.
+    setMapResetVersion((version) => version + 1);
+  }, [retry]);
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       <View style={StyleSheet.absoluteFill}>
         <MapContainer
+          key={mapResetVersion}
           features={zonesGeoJSON.features}
           focusBounds={focusBounds}
           mapStyle={mapStyle}
           onZonePress={handleZonePress}
           userLocation={userLocation}
-          zoomControlTop={insets.top + 156}
+          zoomControlTop={insets.top + 169}
         />
       </View>
 
@@ -188,7 +176,7 @@ export function MapScreen() {
         </Pressable>
       </SafeAreaView>
 
-      <View style={[styles.mapControls, { top: insets.top + 174 }]}>
+      <View style={[styles.mapControls, { top: insets.top + 63 }]}>
         <MapControl
           label={mapStyle === 'terrain' ? 'Cambiar a mapa callejero' : 'Cambiar a mapa topográfico'}
           icon={mapStyle === 'terrain'
@@ -220,16 +208,25 @@ export function MapScreen() {
         </Pressable>
       </View>
 
-      {locationMessage && (
-        <View style={[styles.locationNotice, { top: insets.top + 278, backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+      {locationMessage && !locationNoticeDismissed && (
+        <View style={[styles.locationNotice, { bottom: (Platform.OS === 'web' ? 12 : 10) + bottomControlsHeight + 12, backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <Text style={[styles.locationNoticeText, { color: theme.colors.textPrimary }]}>{locationMessage}</Text>
-          <Pressable accessibilityLabel="Cerrar aviso" onPress={() => setLocationMessage(null)}>
-            <Text style={{ color: theme.colors.primary, fontWeight: '700' }}>×</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar aviso"
+            onPress={() => setLocationNoticeDismissed(true)}
+            style={({ pressed }) => [styles.locationNoticeClose, {
+              backgroundColor: theme.colors.background,
+              borderColor: theme.colors.border,
+              opacity: pressed ? 0.65 : 1,
+            }]}
+          >
+            <SymbolView name={{ ios: 'xmark', android: 'close', web: 'close' }} size={16.5} tintColor={theme.colors.primary} />
           </Pressable>
         </View>
       )}
 
-      <View pointerEvents="box-none" style={[styles.bottomOverlay, { bottom: Platform.OS === 'web' ? 12 : 10 }]}>
+      <View pointerEvents="box-none" onLayout={(event) => setBottomControlsHeight(event.nativeEvent.layout.height)} style={[styles.bottomOverlay, { bottom: Platform.OS === 'web' ? 12 : 10 }]}>
         <View style={[styles.legend, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           {[
             { label: 'Bajo', color: theme.risk.bajo },
@@ -365,7 +362,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 5,
   },
-  mapControls: { position: 'absolute', right: 12, zIndex: 3, gap: 9 },
+  mapControls: { position: 'absolute', right: 13, zIndex: 3, gap: 9 },
   mapControl: {
     width: 44,
     height: 44,
@@ -381,13 +378,14 @@ const styles = StyleSheet.create({
   },
   locationNotice: {
     position: 'absolute',
-    right: 64,
+    left: 12,
+    right: 12,
     zIndex: 3,
-    maxWidth: 220,
     minHeight: 40,
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 11,
+    paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -397,7 +395,16 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
   },
-  locationNoticeText: { flex: 1, fontSize: 12 },
+  locationNoticeText: { flex: 1, fontSize: 12, textAlign: 'center' },
+  locationNoticeClose: {
+    width: 33,
+    height: 33,
+    flexShrink: 0,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   bottomOverlay: {
     position: 'absolute',
     zIndex: 3,

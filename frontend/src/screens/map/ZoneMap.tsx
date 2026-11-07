@@ -48,7 +48,8 @@ export function ZoneMap({ features, focusBounds, onZonePress, mapStyle, userLoca
     html, body, #map { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #e8eef2; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     .leaflet-container { background: #e8eef2; }
-    .leaflet-top.leaflet-left { top: ${zoomControlTop}px; left: 12px; }
+    .leaflet-top.leaflet-right { top: ${zoomControlTop}px; right: 35px; }
+    .leaflet-top.leaflet-right .leaflet-control-zoom { margin: 0; transform: translateX(50%); }
   </style>
 </head>
 <body>
@@ -62,6 +63,7 @@ export function ZoneMap({ features, focusBounds, onZonePress, mapStyle, userLoca
   <script>
     try {
       const map = L.map('map', { zoomControl: false, attributionControl: true }).setView([DATA.initialCenter[1], DATA.initialCenter[0]], DATA.initialZoom);
+      map.attributionControl.setPrefix(false);
       window.focusZone = ([west, south, east, north]) => {
         map.invalidateSize();
         map.flyToBounds([[south, west], [north, east]], {
@@ -73,7 +75,7 @@ export function ZoneMap({ features, focusBounds, onZonePress, mapStyle, userLoca
         const center = map.getCenter();
         report({ type: 'camera-change', center: [center.lng, center.lat], zoom: map.getZoom() });
       });
-      L.control.zoom({ position: 'topleft' }).addTo(map);
+      L.control.zoom({ position: 'topright' }).addTo(map);
       const isTerrain = DATA.mapStyle === 'terrain';
       const tileUrl = isTerrain
         ? 'https://tile.opentopomap.org/{z}/{x}/{y}.png'
@@ -81,7 +83,7 @@ export function ZoneMap({ features, focusBounds, onZonePress, mapStyle, userLoca
       const layer = L.tileLayer(tileUrl, {
         maxZoom: isTerrain ? 17 : 19,
         attribution: isTerrain
-          ? 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://opentopomap.org">OpenTopoMap</a>'
+          ? '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> · SRTM | <a href="https://opentopomap.org/about">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
           : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
 

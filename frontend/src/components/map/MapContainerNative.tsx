@@ -83,7 +83,7 @@ export function MapContainerNative({ features, focusBounds, onZonePress, mapStyl
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  zoom: { position: 'absolute', left: 12, gap: 4 },
+  zoom: { position: 'absolute', right: 11, gap: 9 },
   button: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   error: { position: 'absolute', bottom: 100, left: 16, right: 16, padding: 12, borderRadius: 12 },
 });
