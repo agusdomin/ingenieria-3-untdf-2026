@@ -36,6 +36,15 @@
         }
       ],
       "expo-secure-store",
+      ["expo-camera", {
+        "cameraPermission": "Avalanchapp usa la cámara para adjuntar fotos a tus observaciones.",
+        "recordAudioAndroid": false
+      }],
+      ["expo-image-picker", {
+        "photosPermission": "Avalanchapp permite adjuntar fotos de tu galería a las observaciones.",
+        "cameraPermission": "Avalanchapp usa la cámara para adjuntar fotos a tus observaciones.",
+        "microphonePermission": false
+      }],
       "expo-sqlite",
       "@react-native-community/datetimepicker",
       "@maplibre/maplibre-react-native"

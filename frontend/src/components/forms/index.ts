@@ -1,4 +1,6 @@
 export { AppSelect } from './AppSelect';
+export { AppImagePicker } from './AppImagePicker';
+export type { AppImagePickerProps } from './AppImagePicker';
 export type { SelectOption } from './AppSelect';
 export { AppDatePicker } from './AppDatePicker';
 export { DateRangePicker } from './DateRangePicker';
