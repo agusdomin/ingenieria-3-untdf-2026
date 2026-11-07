@@ -26,7 +26,7 @@ import { getZoneColor, type ZoneFeature } from './zoneMap.types';
 
 export function MapScreen() {
   const { theme } = useTheme();
-  const { isConnected } = useNetwork();
+  const { status: networkStatus } = useNetwork();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
@@ -154,9 +154,9 @@ export function MapScreen() {
               <Text style={[styles.statusText, { color: theme.colors.textSecondary }]}>Datos de ejemplo</Text>
             </View>
             <View style={[styles.statusPill, { backgroundColor: theme.colors.surfaceSecondary }]}>
-              <View style={[styles.statusDot, { backgroundColor: isConnected ? theme.colors.success : theme.colors.danger }]} />
+              <View style={[styles.statusDot, { backgroundColor: networkStatus === 'online' ? theme.colors.success : networkStatus === 'offline' ? theme.colors.warning : theme.colors.textMuted }]} />
               <Text style={[styles.statusText, { color: theme.colors.textSecondary }]}>
-                {isConnected ? 'En línea' : 'Sin conexión'}
+                {networkStatus === 'online' ? 'En línea' : networkStatus === 'offline' ? 'Sin conexión' : 'Comprobando red'}
               </Text>
             </View>
           </View>
