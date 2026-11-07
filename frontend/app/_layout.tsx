@@ -6,7 +6,8 @@ import {
 import { AppProviders } from '../src/providers/AppProviders';
 import { ErrorFallback } from '../src/components/errors/ErrorFallback';
 
-function ScreenErrorBoundary({
+// Expo Router wraps the root layout, including AppProviders, with this boundary.
+export function ErrorBoundary({
   retry,
 }: ErrorBoundaryProps) {
   return (
@@ -19,7 +20,7 @@ function ScreenErrorBoundary({
 }
 
 export const unstable_settings = {
-  screenErrorBoundary: ScreenErrorBoundary,
+  screenErrorBoundary: ErrorBoundary,
 };
 
 export default function RootLayout() {

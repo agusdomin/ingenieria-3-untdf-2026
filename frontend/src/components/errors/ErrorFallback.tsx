@@ -1,3 +1,4 @@
+import { useContext } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -5,7 +6,8 @@ import {
   View,
 } from 'react-native';
 
-import { useTheme } from '../../theme/useTheme';
+import { ThemeContext } from '../../theme/themeContext';
+import { lightTheme } from '../../theme/lightTheme';
 
 interface ErrorFallbackProps {
   onRetry: () => void;
@@ -14,7 +16,8 @@ interface ErrorFallbackProps {
 export function ErrorFallback({
   onRetry,
 }: ErrorFallbackProps) {
-  const { theme } = useTheme();
+  // The root recovery screen renders outside AppProviders when they fail.
+  const theme = useContext(ThemeContext)?.theme ?? lightTheme;
 
   return (
     <View
@@ -35,7 +38,7 @@ export function ErrorFallback({
           },
         ]}
       >
-        Ocurrió un error
+        Ocurrió un problema inesperado
       </Text>
 
       <Text
@@ -51,6 +54,7 @@ export function ErrorFallback({
       </Text>
 
       <Pressable
+        accessibilityRole="button"
         onPress={onRetry}
         style={[
           styles.button,
