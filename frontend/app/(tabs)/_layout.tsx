@@ -1,33 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
 import { Tabs } from 'expo-router/js-tabs';
 import { SymbolView } from 'expo-symbols';
 
-import { LoginGateModal } from '../../src/components/auth/LoginGateModal';
-import { useAuth } from '../../src/contexts/AuthContext';
 import { useTheme } from '../../src/theme/useTheme';
 
 export default function TabsLayout() {
-  const { isAuthenticated, isLoading } = useAuth();
   const { theme } = useTheme();
-  const [loginVisible, setLoginVisible] = useState(false);
-  const didShowLogin = useRef(false);
-
-  useEffect(() => {
-    if (isLoading) return;
-
-    if (isAuthenticated) {
-      setLoginVisible(false);
-      return;
-    }
-
-    if (!didShowLogin.current) {
-      didShowLogin.current = true;
-      setLoginVisible(true);
-    }
-  }, [isAuthenticated, isLoading]);
 
   return (
-    <>
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -99,10 +78,5 @@ export default function TabsLayout() {
           }}
         />
       </Tabs>
-      <LoginGateModal
-        visible={loginVisible && !isAuthenticated}
-        onDismiss={() => setLoginVisible(false)}
-      />
-    </>
   );
 }
