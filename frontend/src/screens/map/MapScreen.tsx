@@ -20,6 +20,7 @@ import { zonesGeoJSON } from '../../mocks/zones.mock';
 import { useNetwork } from '../../network/NetworkContext';
 import { useTheme } from '../../theme/useTheme';
 import { MapContainer } from '../../components/map/MapContainer';
+import { LoginGateModal } from '../../components/auth/LoginGateModal';
 import { useLocation } from '../../hooks/useLocation';
 import { getZoneColor, type ZoneFeature } from './zoneMap.types';
 
@@ -30,6 +31,7 @@ export function MapScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
+  const [showLogin, setShowLogin] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [focusBounds, setFocusBounds] = useState<[number, number, number, number]>();
   const [mapStyle, setMapStyle] = useState<'street' | 'terrain'>('terrain');
@@ -75,6 +77,7 @@ export function MapScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
+      {showLogin ? <LoginGateModal visible onDismiss={() => setShowLogin(false)} /> : null}
       <View style={StyleSheet.absoluteFill}>
         <MapContainer
           key={mapResetVersion}
@@ -115,7 +118,7 @@ export function MapScreen() {
               accessibilityLabel="Iniciar sesión"
               accessibilityRole="button"
               hitSlop={8}
-              onPress={() => router.push('/auth/login')}
+              onPress={() => { Keyboard.dismiss(); setShowLogin(true); }}
               style={styles.accountButton}
             >
               <SymbolView

@@ -159,7 +159,7 @@ export function AppSelect({
       <Modal
         visible={visible}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={closeModal}
       >
         <View style={styles.modalContainer}>
