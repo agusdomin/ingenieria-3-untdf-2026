@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import type { SymbolViewProps } from 'expo-symbols';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AppBottomSheet } from '../../components/dialogs/AppBottomSheet';
 
 import { zonesGeoJSON } from '../../mocks/zones.mock';
 import { useNetwork } from '../../network/NetworkContext';
@@ -44,6 +45,7 @@ export function MapScreen() {
   ), [latitude, longitude, locating, isFallback]);
   const locationMessage = !locating ? error : null;
   const [showSafetyNotice, setShowSafetyNotice] = useState(false);
+  const [selectedZone, setSelectedZone] = useState<ZoneFeature | null>(null); //selecciona la zona para que aparezca en el modal
 
   const features = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
@@ -63,10 +65,19 @@ export function MapScreen() {
   }
 
   const handleZonePress = useCallback((zonaId: string) => {
+     console.log('ZONA SELECCIONADA:', zonaId);  
     Keyboard.dismiss();
-    router.push({ pathname: '/mapa/zona/[zonaId]', params: { zonaId } });
-  }, [router]);
+    
+       const zone = zonesGeoJSON.features.find(
+       (feature) => feature.properties.id === zonaId
+      );
 
+      if (zone) {
+        setSelectedZone(zone);
+      }
+    //router.push({ pathname: '/mapa/zona/[zonaId]', params: { zonaId } });
+  }, []);  //[router]
+ 
   const locateMe = useCallback(async () => {
     setLocationNoticeDismissed(false);
     setFocusBounds(undefined);
@@ -283,9 +294,46 @@ export function MapScreen() {
             >
               <Text style={[styles.noticeActionText, { color: theme.colors.textInverse }]}>Entendido</Text>
             </Pressable>
+  
           </View>
         </View>
       </Modal>
+      {/* Panel inferior con información de la zona */}
+<AppBottomSheet
+  visible={selectedZone !== null}
+  onClose={() => setSelectedZone(null)}
+  title={selectedZone?.properties.name ?? 'Información de la zona'}
+>
+  {selectedZone && (
+    <View style={styles.zoneDetails}>
+      <Text style={[styles.zoneLabel, { color: theme.colors.textSecondary }]}>
+        Nivel de riesgo
+      </Text>
+
+      <View
+        style={[
+          styles.zoneRiskBadge,
+          {
+            backgroundColor: getZoneColor(
+              selectedZone.properties.riskLevel,
+              theme
+            ),
+          },
+        ]}
+      >
+        <Text style={styles.zoneRiskText}>
+          {selectedZone.properties.riskLevel.toUpperCase()}
+        </Text>
+      </View>
+
+      <Text style={[styles.zoneDescription, { color: theme.colors.textSecondary }]}>
+        Información ilustrativa de esta zona. Los niveles de riesgo
+        mostrados corresponden a datos de ejemplo y no representan
+        un pronóstico oficial.
+      </Text>
+    </View>
+  )}
+</AppBottomSheet>
     </View>
   );
 }
@@ -459,4 +507,30 @@ const styles = StyleSheet.create({
   noticeBody: { fontSize: 14, lineHeight: 21 },
   noticeAction: { height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 5 },
   noticeActionText: { fontSize: 14, fontWeight: '700' },
+  zoneDetails: {
+  gap: 12,
+},
+
+zoneLabel: {
+  fontSize: 13,
+  fontWeight: '500',
+},
+
+zoneRiskBadge: {
+  alignSelf: 'flex-start',
+  paddingHorizontal: 14,
+  paddingVertical: 8,
+  borderRadius: 20,
+},
+
+zoneRiskText: {
+  color: '#FFFFFF',
+  fontSize: 13,
+  fontWeight: '700',
+},
+
+zoneDescription: {
+  fontSize: 13,
+  lineHeight: 20,
+},
 });
