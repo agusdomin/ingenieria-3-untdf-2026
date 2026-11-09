@@ -38,13 +38,13 @@ export function ConfirmationView({
         style={[
           styles.iconContainer,
           {
-            backgroundColor: theme.colors.success,
+            backgroundColor: theme.colors.primarySoft,
           },
         ]}
         accessibilityRole="image"
         accessibilityLabel="Operación completada correctamente"
       >
-        <Text style={styles.checkmark}>✓</Text>
+        <Text style={[styles.checkmark, { color: theme.colors.primary }]}>✓</Text>
       </View>
 
       {/* Título */}
@@ -53,7 +53,7 @@ export function ConfirmationView({
         color="primary"
         style={styles.title}
       >
-        {title.toLocaleUpperCase()}
+        {title}
       </AppText>
 
       {/* Mensaje opcional */}
@@ -89,9 +89,9 @@ const styles = StyleSheet.create({
   },
 
   iconContainer: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: 72,
+    height: 72,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -105,7 +105,6 @@ const styles = StyleSheet.create({
 
   title: {
     textAlign: 'center',
-    textTransform: 'uppercase',
   },
 
   message: {

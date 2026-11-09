@@ -19,7 +19,7 @@ export function WizardHeader({
   const { theme } = useTheme();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { borderBottomColor: theme.colors.border }]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`Volver desde ${title}`}
@@ -27,7 +27,7 @@ export function WizardHeader({
         hitSlop={8}
         style={({ pressed }) => [
           styles.backButton,
-          { opacity: pressed ? 0.65 : 1 },
+          { borderColor: theme.colors.border, backgroundColor: theme.colors.surface, opacity: pressed ? 0.65 : 1 },
         ]}
       >
         <SymbolView
@@ -40,6 +40,7 @@ export function WizardHeader({
           tintColor={theme.colors.textPrimary}
         />
 
+      </Pressable>
         <Text
           accessibilityRole="header"
           style={[
@@ -49,7 +50,6 @@ export function WizardHeader({
         >
           {title}
         </Text>
-      </Pressable>
 
       <Text
         style={[
@@ -71,17 +71,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     gap: 12,
+    borderBottomWidth: 1,
   },
   backButton: {
-    flexDirection: 'row',
+    width: 44,
+    height: 44,
+    borderWidth: 1,
+    borderRadius: 22,
+    justifyContent: 'center',
     alignItems: 'center',
     gap: 12,
-    flexShrink: 1,
+    flexShrink: 0,
   },
   title: {
     fontSize: 18,
     fontWeight: '700',
     flexShrink: 1,
+    flex: 1,
   },
   step: {
     fontSize: 13,

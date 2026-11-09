@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 
 import { useTheme } from '../../theme/useTheme';
+import { SymbolView } from 'expo-symbols';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface AppBottomSheetProps {
   visible: boolean;
@@ -31,12 +33,13 @@ export function AppBottomSheet({
   closeOnBackdropPress = true,
 }: AppBottomSheetProps) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="fade"
       onRequestClose={onClose}
     >
       <View style={styles.modalContainer}>
@@ -65,6 +68,8 @@ export function AppBottomSheet({
               borderTopRightRadius:
                 theme.bottomSheet.borderTopRightRadius,
               padding: theme.bottomSheet.padding,
+              paddingBottom: Math.max(insets.bottom, 20),
+              borderColor: theme.colors.border,
               height,
             },
           ]}
@@ -75,6 +80,7 @@ export function AppBottomSheet({
               <Text
                 style={[
                   theme.typography.subheading,
+                  { flex: 1 },
                   { color: theme.colors.textPrimary },
                 ]}
               >
@@ -86,15 +92,9 @@ export function AppBottomSheet({
                 accessibilityRole="button"
                 accessibilityLabel="Cerrar"
                 hitSlop={10}
+                style={({ pressed }) => [styles.closeButton, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceSecondary, opacity: pressed ? 0.7 : 1 }]}
               >
-                <Text
-                  style={[
-                    styles.closeButton,
-                    { color: theme.colors.textSecondary },
-                  ]}
-                >
-                  ×
-                </Text>
+                <SymbolView name={{ ios: 'xmark', android: 'close', web: 'close' }} size={20} tintColor={theme.colors.textPrimary} />
               </Pressable>
             </View>
           ) : null}
@@ -117,6 +117,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     justifyContent: 'flex-end',
+    alignItems: 'center',
   },
 
   overlay: {
@@ -129,6 +130,8 @@ const styles = StyleSheet.create({
 
   sheet: {
     width: '100%',
+    maxWidth: 600,
+    borderWidth: 1,
     maxHeight: '90%',
     gap: 16,
     elevation: 6,
@@ -141,8 +144,12 @@ const styles = StyleSheet.create({
   },
 
   closeButton: {
-    fontSize: 26,
-    fontWeight: '400',
+    width: 44,
+    height: 44,
+    borderWidth: 1,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   content: {
