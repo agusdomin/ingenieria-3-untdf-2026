@@ -25,6 +25,18 @@ export const queryKeys = {
 
   detail: (id: string) =>
     ['outings', 'detail', id] as const,
+
+  traffic: (
+    latitude: number | null,
+    longitude: number | null,
+    radiusKm: number
+  ) => [
+    'outings',
+    'traffic',
+    latitude,
+    longitude,
+    radiusKm,
+  ] as const,
 },
   
     auth: {

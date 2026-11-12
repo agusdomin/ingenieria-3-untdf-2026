@@ -86,7 +86,7 @@ export function AppBottomSheet({
               >
                 {title}
               </Text>
-
+               
               <Pressable
                 onPress={onClose}
                 accessibilityRole="button"
@@ -98,6 +98,9 @@ export function AppBottomSheet({
               </Pressable>
             </View>
           ) : null}
+
+          
+
 
           {/* Contenido desplazable */}
           <ScrollView

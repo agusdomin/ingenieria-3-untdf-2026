@@ -1,3 +1,7 @@
+import type {
+  TrafficByZoneParams,
+} from '../types/outing';
+
 import {
     useMutation,
     useQuery,
@@ -10,7 +14,8 @@ import {
     createOuting,
     getOutings,
     //getOutingsByZone,
-    //getTrafficByZone,
+    getTrafficByZone,
+  
   } from '../services/outings.service';
   
   export const useOutings = () => {
@@ -21,6 +26,32 @@ import {
       getOutings,
   });
 };
+export const useTrafficByZone = (
+  params: TrafficByZoneParams | null
+) => {
+  return useQuery({
+    queryKey: queryKeys.outings.traffic(
+      params?.latitude ?? null,
+      params?.longitude ?? null,
+      params?.radiusKm ?? 5
+    ),
+
+    queryFn: () => {
+      if (!params) {
+        throw new Error('No se proporcionaron coordenadas');
+      }
+
+      return getTrafficByZone(params);
+    },
+
+    enabled: params !== null,
+
+    staleTime: 1000 * 60,
+  });
+};
+
+
+
 /*
   export const useOutingsByZone =
     (
