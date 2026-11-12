@@ -20,7 +20,7 @@ import {
 } from "react-native-safe-area-context";
 import { AppBottomSheet } from "../../components/dialogs/AppBottomSheet";
 import { useTrafficByZone } from "../../queries/outings.queries";
-
+import { LoginGateModal } from "../../components/auth/LoginGateModal";
 import { zonesGeoJSON } from "../../mocks/zones.mock";
 import { useNetwork } from "../../network/NetworkContext";
 import { useTheme } from "../../theme/useTheme";
@@ -33,6 +33,7 @@ export function MapScreen() {
   const { status: networkStatus } = useNetwork();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [showLogin, setShowLogin] = useState(false);
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [focusBounds, setFocusBounds] =
@@ -120,6 +121,12 @@ export function MapScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
+      {showLogin ? (
+      <LoginGateModal
+        visible
+        onDismiss={() => setShowLogin(false)}
+      />
+    ) : null}
       <View style={StyleSheet.absoluteFill}>
         <MapContainer
           key={mapResetVersion}
@@ -191,7 +198,10 @@ export function MapScreen() {
               accessibilityLabel="Iniciar sesión"
               accessibilityRole="button"
               hitSlop={8}
-              onPress={() => router.push("/auth/login")}
+              onPress={() => {
+                Keyboard.dismiss();
+                setShowLogin(true);
+              }}
               style={styles.accountButton}
             >
               <SymbolView
@@ -524,6 +534,7 @@ export function MapScreen() {
         visible={showSafetyNotice}
         onRequestClose={() => setShowSafetyNotice(false)}
       >
+        
         <View
           style={[
             styles.noticeBackdrop,
@@ -975,6 +986,6 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   zoneRiskContainer: {
-  gap: 10,
-},
+    gap: 10,
+  },
 });

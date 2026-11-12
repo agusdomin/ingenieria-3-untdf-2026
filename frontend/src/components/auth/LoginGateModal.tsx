@@ -2,6 +2,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,7 +24,7 @@ export function LoginGateModal({ visible, onDismiss }: LoginGateModalProps) {
   return (
     <Modal
       animationType="fade"
-      onRequestClose={() => {}}
+      onRequestClose={onDismiss}
       statusBarTranslucent
       transparent
       visible={visible}
@@ -45,6 +46,14 @@ export function LoginGateModal({ visible, onDismiss }: LoginGateModalProps) {
                 size={23}
               />
             </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Cerrar inicio de sesión"
+              onPress={onDismiss}
+              style={({ pressed }) => [styles.closeButton, { backgroundColor: theme.colors.surfaceSecondary, borderColor: theme.colors.border, opacity: pressed ? 0.7 : 1 }]}
+            >
+              <SymbolView name={{ ios: 'xmark', android: 'close', web: 'close' }} size={20} tintColor={theme.colors.textPrimary} />
+            </Pressable>
           </View>
           <ScrollView
             keyboardShouldPersistTaps="handled"
@@ -88,6 +97,7 @@ const styles = StyleSheet.create({
   },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   brandMark: { width: 44, height: 44, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  closeButton: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   scrollContent: { paddingBottom: 4 },
   footnote: { textAlign: 'center', fontSize: 12, marginTop: 12 },
 });

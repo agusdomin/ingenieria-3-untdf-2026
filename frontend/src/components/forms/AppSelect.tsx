@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import { useTheme } from '../../theme/useTheme';
+import { SymbolView } from 'expo-symbols';
 
 export interface SelectOption {
   label: string;
@@ -159,7 +160,7 @@ export function AppSelect({
       <Modal
         visible={visible}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={closeModal}
       >
         <View style={styles.modalContainer}>
@@ -182,6 +183,7 @@ export function AppSelect({
                 borderTopRightRadius:
                   theme.bottomSheet.borderTopRightRadius,
                 padding: theme.bottomSheet.padding,
+                borderColor: theme.colors.border,
               },
             ]}
           >
@@ -200,15 +202,9 @@ export function AppSelect({
                 onPress={closeModal}
                 accessibilityRole="button"
                 accessibilityLabel="Cerrar"
+                style={({ pressed }) => [styles.closeButton, { backgroundColor: theme.colors.surfaceSecondary, borderColor: theme.colors.border, opacity: pressed ? 0.7 : 1 }]}
               >
-                <Text
-                  style={{
-                    color: theme.colors.textSecondary,
-                    fontSize: 22,
-                  }}
-                >
-                  ✕
-                </Text>
+                <SymbolView name={{ ios: 'xmark', android: 'close', web: 'close' }} size={20} tintColor={theme.colors.textPrimary} />
               </Pressable>
             </View>
 
@@ -245,6 +241,7 @@ export function AppSelect({
               keyExtractor={(item) => item.value}
               keyboardShouldPersistTaps="handled"
               style={styles.optionsList}
+              contentContainerStyle={{ gap: 10, paddingBottom: 8 }}
               renderItem={({ item }) => {
                 const isSelected = item.value === value;
 
@@ -263,8 +260,9 @@ export function AppSelect({
                           ? theme.colors.primarySoft
                           : pressed
                             ? theme.colors.surfaceSecondary
-                            : 'transparent',
-                        borderBottomColor: theme.colors.divider,
+                            : theme.colors.surfaceSecondary,
+                        borderColor: isSelected ? theme.colors.primary : theme.colors.border,
+                        opacity: pressed ? 0.75 : 1,
                       },
                     ]}
                   >
@@ -325,10 +323,13 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     justifyContent: 'flex-end',
+    alignItems: 'center',
   },
 
   bottomSheet: {
     width: '100%',
+    maxWidth: 600,
+    borderWidth: 1,
     maxHeight: '75%',
     gap: 16,
     elevation: 6,
@@ -349,10 +350,11 @@ const styles = StyleSheet.create({
   },
 
   option: {
-    minHeight: 48,
+    minHeight: 56,
     paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -362,6 +364,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     padding: 20,
   },
+  closeButton: { width: 44, height: 44, borderWidth: 1, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   overlay: {
   position: 'absolute',
   top: 0,

@@ -1,7 +1,6 @@
 
 import { useCallback, useState } from 'react';
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,7 +9,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppImagePicker, AppSelect, AppTextArea, RadioGroup } from '../../components/forms';
+import { AppImagePicker, AppSelect, AppTextArea } from '../../components/forms';
+import { AppBottomSheet } from '../../components/dialogs/AppBottomSheet';
 import { WizardHeader } from '../../components/navigation/WizardHeader';
 import { MapContainer } from '../../components/map/MapContainer';
 import { zonesGeoJSON } from '../../mocks/zones.mock';
@@ -51,6 +51,7 @@ export function NewObservationScreen() {
  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [showExit, setShowExit] = useState(false);
   const [type, setType] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -71,20 +72,7 @@ export function NewObservationScreen() {
     if (currentStep > 1) {
       setCurrentStep((step) => step - 1);
     } else {
-      Alert.alert(
-        'Cancelar observación',
-        '¿Querés salir del formulario?',
-        [
-          { text: 'Continuar cargando', style: 'cancel' },
-          { text: 'Salir', style: 'destructive', onPress: () => {
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace('/(tabs)/mapa' as never);
-          }} 
-        },
-        ],
-      );
+      setShowExit(true);
     }
   };
 
@@ -104,8 +92,8 @@ export function NewObservationScreen() {
     >
       {isConfirmed ? (
       <ConfirmationView
-        title="¡OBSERVACIÓN CARGADA!"
-        message="La información de tu observación fue revisada correctamente."
+        title="Observación revisada"
+        message="Revisaste los datos de tu observación. El envío todavía no está integrado: no se guardó ni se publicó."
         buttonLabel="Ver en Mapa"
         onAction={() => router.replace('/(tabs)/mapa' as never)}
       />
@@ -259,6 +247,19 @@ export function NewObservationScreen() {
 
        </>
        )}
+      <AppBottomSheet visible={showExit} onClose={() => setShowExit(false)} title="¿Salir de la observación?">
+        <View style={styles.exitContent}>
+          <Text style={[theme.typography.body, { color: theme.colors.textSecondary }]}>Los datos de este formulario todavía no están guardados.</Text>
+          <ActionButton label="Seguir editando" onPress={() => setShowExit(false)} />
+          <Pressable accessibilityRole="button" onPress={() => {
+            setShowExit(false);
+            if (router.canGoBack()) router.back();
+            else router.replace('/(tabs)/mapa' as never);
+          }} style={({ pressed }) => [styles.actionButton, { borderColor: theme.colors.danger, backgroundColor: theme.colors.surface, opacity: pressed ? 0.7 : 1 }]}>
+            <Text style={[theme.typography.button, { color: theme.colors.danger }]}>Salir sin guardar</Text>
+          </Pressable>
+        </View>
+      </AppBottomSheet>
     </SafeAreaView>
   );
 }
@@ -279,16 +280,18 @@ function ActionButton({
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
-      style={[
+      style={({ pressed }) => [
         styles.actionButton,
         {
+          borderColor: disabled ? theme.colors.border : theme.colors.primary,
+          opacity: disabled ? 0.5 : pressed ? 0.75 : 1,
           backgroundColor: disabled
             ? theme.colors.border
             : theme.colors.primary,
         },
       ]}
     >
-      <Text style={{ color: theme.colors.textInverse, fontWeight: '700' }}>
+      <Text style={[theme.typography.button, { color: theme.colors.textInverse }]}>
         {label}
       </Text>
     </Pressable>
@@ -299,7 +302,7 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   const { theme } = useTheme();
 
   return (
-    <View style={styles.summaryRow}>
+    <View style={[styles.summaryRow, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
       <Text style={{ color: theme.colors.textSecondary, fontWeight: '600' }}>
         {label}
       </Text>
@@ -337,17 +340,19 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     minHeight: 48,
+    borderWidth: 1,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
   },
   summaryRow: {
-    gap: 6,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#99999955',
+    gap: 8,
+    padding: 16,
+    borderWidth: 1,
+    borderRadius: 14,
   },
+  exitContent: { gap: 14 },
 });
 
 

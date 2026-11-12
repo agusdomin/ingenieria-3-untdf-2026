@@ -35,3 +35,14 @@ class plan_salidaSerializer(serializers.ModelSerializer):
                 'fecha_hora_retorno': 'La fecha y hora de retorno debe ser posterior a la de inicio.'
             })
         return data
+
+
+class CoordenadasCentroSerializer(serializers.Serializer):
+    latitud = serializers.FloatField()
+    longitud = serializers.FloatField()
+
+
+class TraficoZonaResponseSerializer(serializers.Serializer):
+    coordenadas = CoordenadasCentroSerializer()
+    radio_km = serializers.FloatField()
+    total_personas = serializers.IntegerField()
