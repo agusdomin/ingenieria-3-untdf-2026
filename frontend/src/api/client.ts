@@ -29,7 +29,8 @@ export const deleteStoredToken = async (key: string): Promise<void> => {
   await SecureStore.deleteItemAsync(key);
 };
 
-export const api = axios.create({
+// eslint-disable-next-line import/no-named-as-default-member
+export const api = axios.create({ 
   baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api',
   timeout: 10000,
   headers: {
@@ -40,10 +41,15 @@ export const api = axios.create({
 api.interceptors.request.use(
   async (config) => {
     const token = await getStoredToken('accessToken');
+    console.log('TOKEN DISPONIBLE:', Boolean(token));
+
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    console.log('URL BASE:', config.baseURL);
+    console.log('URL SOLICITADA:', config.url);
 
     return config;
   },
