@@ -1,62 +1,55 @@
-
-import { useCallback, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { AppImagePicker, AppSelect, AppTextArea } from '../../components/forms';
-import { AppBottomSheet } from '../../components/dialogs/AppBottomSheet';
-import { WizardHeader } from '../../components/navigation/WizardHeader';
-import { MapContainer } from '../../components/map/MapContainer';
-import { zonesGeoJSON } from '../../mocks/zones.mock';
-import { useTheme } from '../../theme/useTheme';
-import { useRouter } from 'expo-router';
-import { ConfirmationView } from '../../components/feedback/ConfirmationView';
+import { useCallback, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { createObservation } from "../../services/observations.service";
+import { AppImagePicker, AppSelect, AppTextArea } from "../../components/forms";
+import { AppBottomSheet } from "../../components/dialogs/AppBottomSheet";
+import { WizardHeader } from "../../components/navigation/WizardHeader";
+import { MapContainer } from "../../components/map/MapContainer";
+import { zonesGeoJSON } from "../../mocks/zones.mock";
+import { useTheme } from "../../theme/useTheme";
+import { useRouter } from "expo-router";
+import { ConfirmationView } from "../../components/feedback/ConfirmationView";
 
 type Coordinate = [number, number];
 
-
 const observationTypes = [
-  { label: 'Condiciones de nieve', value: 'condiciones_nieve' },
-  { label: 'Indicios de avalanchas', value: 'indicios_avalancha' },
-  { label: 'Condiciones del terreno', value: 'condiciones_terreno' },
-  { label: 'Otro', value: 'otro' },
+  { label: "Condiciones de nieve", value: "condiciones_nieve" },
+  { label: "Indicios de avalanchas", value: "indicios_avalancha" },
+  { label: "Condiciones del terreno", value: "condiciones_terreno" },
+  { label: "Otro", value: "otro" },
 ];
 
 const relevanceOptions = [
   {
-    label: 'Informativa',
-    value: 'informativa',
-    description: 'Información general sobre el entorno.',
+    label: "Informativa",
+    value: "informativa",
+    description: "Información general sobre el entorno.",
   },
   {
-    label: 'Precaución',
-    value: 'precaucion',
-    description: 'Situación que merece atención.',
+    label: "Precaución",
+    value: "precaucion",
+    description: "Situación que merece atención.",
   },
   {
-    label: 'Peligrosa',
-    value: 'peligrosa',
-    description: 'Situación que puede representar un peligro.',
+    label: "Peligrosa",
+    value: "peligrosa",
+    description: "Situación que puede representar un peligro.",
   },
 ];
 
 export function NewObservationScreen() {
   const { theme } = useTheme();
- const router = useRouter();
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [showExit, setShowExit] = useState(false);
-  const [type, setType] = useState('');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [relevance, setRelevance] = useState<string | null>('informativa');
-
+  const [type, setType] = useState("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [relevance, setRelevance] = useState<string | null>("informativa");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [coordinate, setCoordinate] = useState<Coordinate | null>(null);
   const [imageUri, setImageUri] = useState<string | null>(null);
 
@@ -76,187 +69,275 @@ export function NewObservationScreen() {
     }
   };
 
-  const handleConfirm = () => {
-    setIsConfirmed(true);
-  };
+  const handleConfirm = async () => {
+    if (!coordinate || !type || isSubmitting) {
+      return;
+    }
 
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      await createObservation({
+        tipo: type,
+        titulo: title.trim(),
+        descripcion: description.trim(),
+        nivel_relevancia: relevance,
+        coordenadas: {
+          longitude: coordinate[0],
+          latitude: coordinate[1],
+        },
+      });
+
+      setIsConfirmed(true);
+    } catch (error: unknown) {
+      console.error("Error al crear observación:", error);
+
+      const apiError = error as {
+        response?: {
+          data?: {
+            detail?: string;
+            [key: string]: unknown;
+          };
+        };
+      };
+
+      const detail = apiError.response?.data?.detail;
+
+      setErrorMessage(
+        typeof detail === "string"
+          ? detail
+          : "No se pudo guardar la observación. Verificá tu conexión e intentá nuevamente.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   const canContinueFromStepOne = type.trim().length > 0;
   const canContinueFromStepTwo = coordinate !== null;
 
   return (
     <SafeAreaView
-      style={[
-        styles.screen,
-        { backgroundColor: theme.colors.background },
-      ]}
+      style={[styles.screen, { backgroundColor: theme.colors.background }]}
     >
       {isConfirmed ? (
-      <ConfirmationView
-        title="Observación revisada"
-        message="Revisaste los datos de tu observación. El envío todavía no está integrado: no se guardó ni se publicó."
-        buttonLabel="Ver en Mapa"
-        onAction={() => router.replace('/(tabs)/mapa' as never)}
-      />
-    ) : (
-      <>
-      <WizardHeader
-        title="Nueva observación"
-        currentStep={currentStep}
-        totalSteps={3}
-        onBack={handleBack}
-      />
-
-      {currentStep === 1 && (
-        <ScrollView contentContainerStyle={styles.content}>
-          <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
-            Información de la observación
-          </Text>
-
-          <AppSelect
-            label="Tipo de observación"
-            options={observationTypes}
-            value={type}
-            onChange={setType}
-            placeholder="Seleccioná un tipo"
+        <ConfirmationView
+          title="¡Observación guardada!"
+          message="Tu observación se registró correctamente y ya está disponible para su consulta."
+          buttonLabel="Ver en Mapa"
+          onAction={() => router.replace("/(tabs)/mapa" as never)}
+        />
+      ) : (
+        <>
+          <WizardHeader
+            title="Nueva observación"
+            currentStep={currentStep}
+            totalSteps={3}
+            onBack={handleBack}
           />
 
-          <AppSelect
-            label="Nivel de relevancia"
-            options={relevanceOptions.map(({ label, value }) => ({
-              label,
-              value,
-            }))}
-            value={relevance ?? ''}
-            onChange={setRelevance}
-            placeholder="Seleccioná la relevancia"
-          />
+          {currentStep === 1 && (
+            <ScrollView contentContainerStyle={styles.content}>
+              <Text
+                style={[styles.heading, { color: theme.colors.textPrimary }]}
+              >
+                Información de la observación
+              </Text>
 
-          <AppTextArea
-            label="Título"
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Ej. Acumulación de nieve en la ladera"
-            maxLength={200}
-            numberOfLines={2}
-          />
+              <AppSelect
+                label="Tipo de observación"
+                options={observationTypes}
+                value={type}
+                onChange={setType}
+                placeholder="Seleccioná un tipo"
+              />
 
-          <AppTextArea
-            label="Descripción"
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Describí lo que observaste..."
-            maxLength={500}
-            numberOfLines={5}
-          />
+              <AppSelect
+                label="Nivel de relevancia"
+                options={relevanceOptions.map(({ label, value }) => ({
+                  label,
+                  value,
+                }))}
+                value={relevance ?? ""}
+                onChange={setRelevance}
+                placeholder="Seleccioná la relevancia"
+              />
 
-          <ActionButton
-            label="Continuar"
-            disabled={!canContinueFromStepOne}
-            onPress={() => setCurrentStep(2)}
-          />
-        </ScrollView>
+              <AppTextArea
+                label="Título"
+                value={title}
+                onChangeText={setTitle}
+                placeholder="Ej. Acumulación de nieve en la ladera"
+                maxLength={200}
+                numberOfLines={2}
+              />
+
+              <AppTextArea
+                label="Descripción"
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Describí lo que observaste..."
+                maxLength={500}
+                numberOfLines={5}
+              />
+
+              {errorMessage && (
+                <Text style={{ color: theme.colors.danger }}>
+                  {errorMessage}
+                </Text>
+              )}
+
+              <ActionButton
+                label="Continuar"
+                disabled={!canContinueFromStepOne}
+                onPress={() => setCurrentStep(2)}
+              />
+            </ScrollView>
+          )}
+
+          {currentStep === 2 && (
+            <ScrollView contentContainerStyle={styles.content}>
+              <Text
+                style={[styles.heading, { color: theme.colors.textPrimary }]}
+              >
+                Ubicación y evidencia
+              </Text>
+
+              <Text style={{ color: theme.colors.textSecondary }}>
+                Tocá el mapa para indicar dónde realizaste la observación.
+              </Text>
+
+              <View style={styles.mapContainer}>
+                <MapContainer
+                  features={zonesGeoJSON.features}
+                  mapStyle="terrain"
+                  onZonePress={handleZonePress}
+                  userLocation={null}
+                  zoomControlTop={16}
+                  onMapPress={handleMapPress}
+                />
+              </View>
+
+              <View
+                style={[
+                  styles.coordinateBox,
+                  { backgroundColor: theme.colors.surface },
+                ]}
+              >
+                <Text style={{ color: theme.colors.textSecondary }}>
+                  Ubicación seleccionada
+                </Text>
+
+                <Text style={{ color: theme.colors.textPrimary }}>
+                  {coordinate
+                    ? `Longitud: ${coordinate[0].toFixed(6)}\nLatitud: ${coordinate[1].toFixed(6)}`
+                    : "Todavía no seleccionaste una ubicación."}
+                </Text>
+              </View>
+
+              <AppImagePicker
+                label="Fotografía (opcional)"
+                value={imageUri}
+                onChange={setImageUri}
+              />
+
+              <ActionButton
+                label="Continuar"
+                disabled={!canContinueFromStepTwo}
+                onPress={() => setCurrentStep(3)}
+              />
+            </ScrollView>
+          )}
+
+          {currentStep === 3 && (
+            <ScrollView contentContainerStyle={styles.content}>
+              <Text
+                style={[styles.heading, { color: theme.colors.textPrimary }]}
+              >
+                Revisar observación
+              </Text>
+
+              <SummaryRow label="Tipo" value={type} />
+              <SummaryRow label="Título" value={title || "Sin título"} />
+              <SummaryRow
+                label="Descripción"
+                value={description || "Sin descripción"}
+              />
+              <SummaryRow
+                label="Relevancia"
+                value={relevance ?? "No especificada"}
+              />
+              <SummaryRow
+                label="Coordenadas"
+                value={
+                  coordinate
+                    ? `${coordinate[0].toFixed(6)}, ${coordinate[1].toFixed(6)}`
+                    : "Sin ubicación"
+                }
+              />
+              <SummaryRow
+                label="Fotografía"
+                value={imageUri ? "Fotografía adjunta" : "Sin fotografía"}
+              />
+
+              {errorMessage && (
+                <Text style={{ color: theme.colors.danger }}>
+                  {errorMessage}
+                </Text>
+              )}
+
+              <ActionButton
+                label={
+                  isSubmitting
+                    ? "Enviando observación..."
+                    : "Confirmar observación"
+                }
+                onPress={handleConfirm}
+                disabled={isSubmitting}
+              />
+            </ScrollView>
+          )}
+        </>
       )}
-
-      {currentStep === 2 && (
-        <ScrollView contentContainerStyle={styles.content}>
-          <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
-            Ubicación y evidencia
-          </Text>
-
-          <Text style={{ color: theme.colors.textSecondary }}>
-            Tocá el mapa para indicar dónde realizaste la observación.
-          </Text>
-
-          <View style={styles.mapContainer}>
-            <MapContainer
-              features={zonesGeoJSON.features}
-              mapStyle="terrain"
-              onZonePress={handleZonePress}
-              userLocation={null}
-              zoomControlTop={16}
-              onMapPress={handleMapPress}
-            />
-          </View>
-
-          <View
+      <AppBottomSheet
+        visible={showExit}
+        onClose={() => setShowExit(false)}
+        title="¿Salir de la observación?"
+      >
+        <View style={styles.exitContent}>
+          <Text
             style={[
-              styles.coordinateBox,
-              { backgroundColor: theme.colors.surface },
+              theme.typography.body,
+              { color: theme.colors.textSecondary },
             ]}
           >
-            <Text style={{ color: theme.colors.textSecondary }}>
-              Ubicación seleccionada
-            </Text>
-
-            <Text style={{ color: theme.colors.textPrimary }}>
-              {coordinate
-                ? `Longitud: ${coordinate[0].toFixed(6)}\nLatitud: ${coordinate[1].toFixed(6)}`
-                : 'Todavía no seleccionaste una ubicación.'}
-            </Text>
-          </View>
-
-          <AppImagePicker
-            label="Fotografía (opcional)"
-            value={imageUri}
-            onChange={setImageUri}
-          />
-
-          <ActionButton
-            label="Continuar"
-            disabled={!canContinueFromStepTwo}
-            onPress={() => setCurrentStep(3)}
-          />
-        </ScrollView>
-      )}
-
-      {currentStep === 3 && (
-        <ScrollView contentContainerStyle={styles.content}>
-          <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
-            Revisar observación
+            Los datos de este formulario todavía no están guardados.
           </Text>
-
-          <SummaryRow label="Tipo" value={type} />
-          <SummaryRow label="Título" value={title || 'Sin título'} />
-          <SummaryRow
-            label="Descripción"
-            value={description || 'Sin descripción'}
-          />
-          <SummaryRow
-            label="Relevancia"
-            value={relevance ?? 'No especificada'}
-          />
-          <SummaryRow
-            label="Coordenadas"
-            value={
-              coordinate
-                ? `${coordinate[0].toFixed(6)}, ${coordinate[1].toFixed(6)}`
-                : 'Sin ubicación'
-            }
-          />
-          <SummaryRow
-            label="Fotografía"
-            value={imageUri ? 'Fotografía adjunta' : 'Sin fotografía'}
-          />
-
           <ActionButton
-            label="Confirmar observación"
-            onPress={handleConfirm}
+            label="Seguir editando"
+            onPress={() => setShowExit(false)}
           />
-        </ScrollView>
-      )}
-
-       </>
-       )}
-      <AppBottomSheet visible={showExit} onClose={() => setShowExit(false)} title="¿Salir de la observación?">
-        <View style={styles.exitContent}>
-          <Text style={[theme.typography.body, { color: theme.colors.textSecondary }]}>Los datos de este formulario todavía no están guardados.</Text>
-          <ActionButton label="Seguir editando" onPress={() => setShowExit(false)} />
-          <Pressable accessibilityRole="button" onPress={() => {
-            setShowExit(false);
-            if (router.canGoBack()) router.back();
-            else router.replace('/(tabs)/mapa' as never);
-          }} style={({ pressed }) => [styles.actionButton, { borderColor: theme.colors.danger, backgroundColor: theme.colors.surface, opacity: pressed ? 0.7 : 1 }]}>
-            <Text style={[theme.typography.button, { color: theme.colors.danger }]}>Salir sin guardar</Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              setShowExit(false);
+              if (router.canGoBack()) router.back();
+              else router.replace("/(tabs)/mapa" as never);
+            }}
+            style={({ pressed }) => [
+              styles.actionButton,
+              {
+                borderColor: theme.colors.danger,
+                backgroundColor: theme.colors.surface,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
+          >
+            <Text
+              style={[theme.typography.button, { color: theme.colors.danger }]}
+            >
+              Salir sin guardar
+            </Text>
           </Pressable>
         </View>
       </AppBottomSheet>
@@ -291,7 +372,9 @@ function ActionButton({
         },
       ]}
     >
-      <Text style={[theme.typography.button, { color: theme.colors.textInverse }]}>
+      <Text
+        style={[theme.typography.button, { color: theme.colors.textInverse }]}
+      >
         {label}
       </Text>
     </Pressable>
@@ -302,13 +385,19 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   const { theme } = useTheme();
 
   return (
-    <View style={[styles.summaryRow, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-      <Text style={{ color: theme.colors.textSecondary, fontWeight: '600' }}>
+    <View
+      style={[
+        styles.summaryRow,
+        {
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border,
+        },
+      ]}
+    >
+      <Text style={{ color: theme.colors.textSecondary, fontWeight: "600" }}>
         {label}
       </Text>
-      <Text style={{ color: theme.colors.textPrimary }}>
-        {value}
-      </Text>
+      <Text style={{ color: theme.colors.textPrimary }}>{value}</Text>
     </View>
   );
 }
@@ -320,17 +409,17 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     gap: 20,
-    width: '100%',
+    width: "100%",
     maxWidth: 560,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   heading: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   mapContainer: {
     height: 360,
-    overflow: 'hidden',
+    overflow: "hidden",
     borderRadius: 14,
   },
   coordinateBox: {
@@ -342,8 +431,8 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderWidth: 1,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: 12,
   },
   summaryRow: {
@@ -354,27 +443,6 @@ const styles = StyleSheet.create({
   },
   exitContent: { gap: 14 },
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // import { useState } from 'react';
 // import { ScrollView, StyleSheet, Text } from 'react-native';

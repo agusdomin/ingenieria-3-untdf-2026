@@ -27,6 +27,7 @@ import { useTheme } from "../../theme/useTheme";
 import { MapContainer } from "../../components/map/MapContainer";
 import { useLocation } from "../../hooks/useLocation";
 import { getZoneColor, getZoneCenter, type ZoneFeature } from "./zoneMap.types";
+import { useCurrentMeteorology } from "../../queries/meteorology.queries";
 
 export function MapScreen() {
   const { theme } = useTheme();
@@ -71,6 +72,15 @@ export function MapScreen() {
           latitude: trafficCoordinates.latitude,
           longitude: trafficCoordinates.longitude,
           radiusKm: 5,
+        }
+      : null,
+  );
+
+  const meteorologyQuery = useCurrentMeteorology(
+    trafficCoordinates
+      ? {
+          latitude: trafficCoordinates.latitude,
+          longitude: trafficCoordinates.longitude,
         }
       : null,
   );
@@ -122,11 +132,8 @@ export function MapScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       {showLogin ? (
-      <LoginGateModal
-        visible
-        onDismiss={() => setShowLogin(false)}
-      />
-    ) : null}
+        <LoginGateModal visible onDismiss={() => setShowLogin(false)} />
+      ) : null}
       <View style={StyleSheet.absoluteFill}>
         <MapContainer
           key={mapResetVersion}
@@ -534,7 +541,6 @@ export function MapScreen() {
         visible={showSafetyNotice}
         onRequestClose={() => setShowSafetyNotice(false)}
       >
-        
         <View
           style={[
             styles.noticeBackdrop,
@@ -705,6 +711,101 @@ export function MapScreen() {
                   >
                     Personas asociadas a salidas en curso dentro de un radio de{" "}
                     {trafficQuery.data.radio_km} km.
+                  </Text>
+                </>
+              )}
+            </View>
+
+            {/* Información meteorológica */}
+            <View style={styles.zoneWeatherContainer}>
+              <Text style={styles.zoneWeatherTitle}>
+                Condiciones meteorológicas
+              </Text>
+
+              {meteorologyQuery.isLoading && (
+                <View style={styles.zoneTrafficLoading}>
+                  <ActivityIndicator size="small" />
+                  <Text>Consultando condiciones meteorológicas...</Text>
+                </View>
+              )}
+
+              {meteorologyQuery.isError && (
+                <Text style={styles.zoneWeatherError}>
+                  No se pudo obtener la información meteorológica. Intentá
+                  nuevamente más tarde.
+                </Text>
+              )}
+              {/* DATOS METEREOLOGICOS DE LA ZONA */}
+              {meteorologyQuery.isSuccess && (
+                <>
+                  <View style={styles.zoneWeatherMain}>
+                    <Text style={styles.zoneWeatherTemperature}>
+                      {meteorologyQuery.data.temperatura != null
+                        ? `${meteorologyQuery.data.temperatura} °C`
+                        : "—"}
+                    </Text>
+
+                    <Text style={styles.zoneWeatherDescription}>
+                      Temperatura actual
+                    </Text>
+                  </View>
+
+                  <View style={styles.zoneWeatherGrid}>
+                    <View style={styles.zoneWeatherItem}>
+                      <Text style={styles.zoneWeatherLabel}>Viento</Text>
+                      <Text style={styles.zoneWeatherValue}>
+                        {meteorologyQuery.data.velocidad_viento ?? "—"} km/h
+                      </Text>
+                      <Text style={styles.zoneWeatherDetail}>
+                        {meteorologyQuery.data.direccion_viento ?? "Sin datos"}
+                      </Text>
+                    </View>
+
+                    <View style={styles.zoneWeatherItem}>
+                      <Text style={styles.zoneWeatherLabel}>Ráfagas</Text>
+                      <Text style={styles.zoneWeatherValue}>
+                        {meteorologyQuery.data.rafaga ?? "—"} km/h
+                      </Text>
+                    </View>
+
+                    <View style={styles.zoneWeatherItem}>
+                      <Text style={styles.zoneWeatherLabel}>
+                        Precipitaciones
+                      </Text>
+                      <Text style={styles.zoneWeatherValue}>
+                        {meteorologyQuery.data.precipitaciones ?? "—"} mm
+                      </Text>
+                    </View>
+
+                    <View style={styles.zoneWeatherItem}>
+                      <Text style={styles.zoneWeatherLabel}>Humedad</Text>
+                      <Text style={styles.zoneWeatherValue}>
+                        {meteorologyQuery.data.humedad ?? "—"} %
+                      </Text>
+                    </View>
+
+                    <View style={styles.zoneWeatherItem}>
+                      <Text style={styles.zoneWeatherLabel}>Nieve fresca</Text>
+                      <Text style={styles.zoneWeatherValue}>
+                        {meteorologyQuery.data.nieve_fresca ?? "—"} cm
+                      </Text>
+                    </View>
+
+                    <View style={styles.zoneWeatherItem}>
+                      <Text style={styles.zoneWeatherLabel}>
+                        Espesor de nieve
+                      </Text>
+                      <Text style={styles.zoneWeatherValue}>
+                        {meteorologyQuery.data.espesor_nieve ?? "—"} cm
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.zoneWeatherUpdated}>
+                    Actualizado:{" "}
+                    {new Date(meteorologyQuery.data.fecha_hora).toLocaleString(
+                      "es-AR",
+                    )}
                   </Text>
                 </>
               )}
@@ -988,4 +1089,70 @@ const styles = StyleSheet.create({
   zoneRiskContainer: {
     gap: 10,
   },
+
+zoneWeatherContainer: {
+  gap: 12,
+  marginTop: 12,
+  paddingTop: 14,
+  borderTopWidth: 1,
+  borderTopColor: "#D1D5DB",
+},
+
+zoneWeatherTitle: {
+  fontSize: 16,
+  fontWeight: "700",
+},
+
+zoneWeatherMain: {
+  gap: 2,
+},
+
+zoneWeatherTemperature: {
+  fontSize: 30,
+  fontWeight: "bold",
+},
+
+zoneWeatherDescription: {
+  fontSize: 13,
+  color: "#6B7280",
+},
+
+zoneWeatherGrid: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: 12,
+},
+
+zoneWeatherItem: {
+  width: "47%",
+  gap: 3,
+},
+
+zoneWeatherLabel: {
+  fontSize: 12,
+  color: "#6B7280",
+},
+
+zoneWeatherValue: {
+  fontSize: 15,
+  fontWeight: "600",
+},
+
+zoneWeatherDetail: {
+  fontSize: 12,
+  color: "#6B7280",
+},
+
+zoneWeatherUpdated: {
+  fontSize: 11,
+  color: "#6B7280",
+  marginTop: 4,
+},
+
+zoneWeatherError: {
+  fontSize: 13,
+  color: "#B91C1C",
+  lineHeight: 19,
+},
+
 });

@@ -8,7 +8,7 @@ import {
 export const getObservations =
   async (): Promise<Observation[]> => {
     const response =
-      await api.get('/observaciones');
+      await api.get('/observaciones/');
 
     return response.data;
   };
@@ -31,7 +31,7 @@ export const createObservation =
   ): Promise<Observation> => {
     const response =
       await api.post(
-        '/observaciones',
+        '/observaciones/',
         data
       );
 

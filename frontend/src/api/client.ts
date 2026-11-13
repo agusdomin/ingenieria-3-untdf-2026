@@ -56,19 +56,38 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response) {
-      console.error(
-        'API error:',
-        error.response.status,
-        error.response.data
-      );
-    } else {
-      console.error('Network error:', error.message);
-    }
+    console.log('===== ERROR API =====');
+    console.log('Mensaje:', error.message);
+    console.log('Código:', error.code);
+    console.log('URL:', error.config?.baseURL + error.config?.url);
+    console.log('Método:', error.config?.method);
+    console.log('Respuesta:', error.response?.status);
+    console.log('Datos:', error.response?.data);
+    console.log('Request existe:', Boolean(error.request));
+    console.log('=====================');
 
     return Promise.reject(error);
   }
 );
+
+
+// api.interceptors.response.use(
+//   (response) => response,
+//   (error) => {
+//     if (error.response) {
+//       console.error(
+//         'API error:',
+//         error.response.status,
+//         error.response.data
+//       );
+//     } else {
+//       console.error('Network error:', error.message);
+//     }
+
+//     return Promise.reject(error);
+//   }
+// );

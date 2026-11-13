@@ -1,70 +1,96 @@
-import { Tabs } from 'expo-router/js-tabs';
-import { SymbolView } from 'expo-symbols';
+import { Tabs } from "expo-router/js-tabs";
+import { SymbolView } from "expo-symbols";
 
-import { useTheme } from '../../src/theme/useTheme';
+import { useTheme } from "../../src/theme/useTheme";
 
 export default function TabsLayout() {
   const { theme } = useTheme();
 
   return (
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: theme.colors.primary,
-          tabBarInactiveTintColor: theme.colors.textMuted,
-          tabBarStyle: {
-            height: 68,
-            paddingTop: 7,
-            paddingBottom: 7,
-            backgroundColor: theme.colors.navbarBackground,
-            borderTopColor: theme.colors.navbarBorder,
-          },
-          tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: '600',
-          },
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.textMuted,
+        tabBarStyle: {
+          height: 68,
+          paddingTop: 7,
+          paddingBottom: 7,
+          backgroundColor: theme.colors.navbarBackground,
+          borderTopColor: theme.colors.navbarBorder,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: "600",
+        },
+      }}
+    >
+      <Tabs.Screen
+        name="mapa"
+        options={{
+          title: "Mapa",
+          tabBarIcon: ({ color }) => (
+            <SymbolView
+              name={{ ios: "map.fill", android: "map", web: "map" }}
+              tintColor={color}
+              size={22}
+            />
+          ),
         }}
-      >
-        <Tabs.Screen
-          name="mapa"
-          options={{
-            title: 'Mapa',
-            tabBarIcon: ({ color }) => (
-              <SymbolView
-                name={{ ios: 'map.fill', android: 'map', web: 'map' }}
-                tintColor={color}
-                size={22}
-              />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="reportes"
-          options={{
-            title: 'Reportes',
-            tabBarIcon: ({ color }) => (
-              <SymbolView
-                name={{ ios: 'waveform.path.ecg', android: 'monitoring', web: 'monitoring' }}
-                tintColor={color}
-                size={22}
-              />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="planificar"
-          options={{
-            title: 'Planificar',
-            tabBarIcon: ({ color }) => (
-              <SymbolView
-                name={{ ios: 'slider.horizontal.3', android: 'tune', web: 'tune' }}
-                tintColor={color}
-                size={22}
-              />
-            ),
-          }}
-        />
-        <Tabs.Screen
+      />
+      <Tabs.Screen
+        name="reportes"
+        options={{
+          title: "Reportes",
+          tabBarIcon: ({ color }) => (
+            <SymbolView
+              name={{
+                ios: "waveform.path.ecg",
+                android: "monitoring",
+                web: "monitoring",
+              }}
+              tintColor={color}
+              size={22}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="planificar"
+        options={{
+          title: "Planificar",
+          tabBarIcon: ({ color }) => (
+            <SymbolView
+              name={{
+                ios: "slider.horizontal.3",
+                android: "tune",
+                web: "tune",
+              }}
+              tintColor={color}
+              size={22}
+            />
+          ),
+        }}
+      />
+      {/* SE AGREGA EL TAB DE USUARIO Y SE QUITA EL DE OFFLINE */}
+      <Tabs.Screen
+        name="usuario"
+        options={{
+          title: "Usuario",
+          tabBarIcon: ({ color }) => (
+            <SymbolView
+              name={{
+                ios: "person.crop.circle",
+                android: "account_circle",
+                web: "account_circle",
+              }}
+              tintColor={color}
+              size={22}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
           name="offline"
           options={{
             title: 'Offline',
@@ -77,6 +103,6 @@ export default function TabsLayout() {
             ),
           }}
         />
-      </Tabs>
+    </Tabs>
   );
 }

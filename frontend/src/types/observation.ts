@@ -24,17 +24,11 @@ export interface Observation {
 }
 
 export interface CreateObservationDTO {
-  coordenadas?: Coordinates;
-
-  titulo?: string;
-
-  descripcion?: string;
-
-  foto_url?: string;
-
-  fecha_hora?: string;
-
+  coordenadas: Coordinates;
+  titulo: string;
+  descripcion: string;
   tipo: string;
-
-  nivel_relevancia?: string;
+  nivel_relevancia: string | null;
+  foto_url?: string;
+  fecha_hora?: string;
 }

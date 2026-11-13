@@ -14,7 +14,7 @@ import {
 export const login = async (
   data: LoginDTO
 ): Promise<AuthResponse> => {
-  const response = await api.post('/auth/login', data);
+  const response = await api.post('/auth/login/', data);
 
   const auth = response.data;
 
@@ -27,7 +27,7 @@ export const login = async (
 export const register = async (
   data: RegisterDTO
 ): Promise<AuthResponse> => {
-  const response = await api.post('/auth/register', data);
+  const response = await api.post('/auth/register/', data);
 
   const auth = response.data;
 
@@ -38,7 +38,7 @@ export const register = async (
 };
 
 export const getCurrentUser = async (): Promise<User> => {
-  const response = await api.get('/auth/me');
+  const response = await api.get('/auth/me/');
 
   return response.data;
 };
