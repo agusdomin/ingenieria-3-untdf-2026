@@ -2,8 +2,14 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 from ..models import Usuario
-from ..serializer import usuarioSerializer
+from ..serializer import (
+    usuarioSerializer,
+    CambiarRolRequestSerializer,
+    CambiarRolResponseSerializer,
+)
+
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
@@ -35,8 +41,27 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         else:
             serializer.save()
 
+    @extend_schema(
+        summary="Cambiar rol de usuario (promover o degradar)",
+        description=(
+            "Permite a un administrador cambiar el rol de un usuario.\n\n"
+            "Valores permitidos para `rol`:\n"
+            "* `experto`: Promueve al usuario al rol de Experto.\n"
+            "* `comun`: Degrada al usuario al rol Común.\n\n"
+            "Requiere permisos de Administrador."
+        ),
+        request=CambiarRolRequestSerializer,
+        responses={
+            200: CambiarRolResponseSerializer,
+            400: OpenApiResponse(description="Rol inválido o no especificado."),
+            401: OpenApiResponse(description="No autenticado."),
+            403: OpenApiResponse(description="No autorizado (solo administradores)."),
+            404: OpenApiResponse(description="Usuario no encontrado."),
+        }
+    )
     @action(detail=True, methods=['patch', 'post'], permission_classes=[permissions.IsAdminUser])
     def cambiar_rol(self, request, pk=None):
+
         '''Permitir el cambio de roles'''
         usuario = self.get_object()
         nuevo_rol = request.data.get('rol')

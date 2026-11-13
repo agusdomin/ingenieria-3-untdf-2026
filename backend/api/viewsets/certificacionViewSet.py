@@ -3,9 +3,15 @@ from django.utils import timezone
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 from ..models import Certificacion, Usuario
-from ..serializer import certificacionSerializer
+from ..serializer import (
+    certificacionSerializer,
+    CertificacionRevisarRequestSerializer,
+    CertificacionRevisarResponseSerializer,
+)
 from ..permissions import IsOwnerOrAdminOrReadOnly
+
 
 
 class CertificacionViewSet(viewsets.ModelViewSet):
@@ -43,6 +49,11 @@ class CertificacionViewSet(viewsets.ModelViewSet):
             estado=Certificacion.Estado.PENDIENTE
         )
 
+    @extend_schema(
+        summary="Bandeja de certificaciones pendientes",
+        description="Retorna todas las certificaciones que se encuentran en estado 'pendiente'. Requiere rol Administrador.",
+        responses={200: certificacionSerializer(many=True)}
+    )
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAdminUser])
     def pendientes(self, request):
         """
@@ -55,8 +66,25 @@ class CertificacionViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        summary="Revisar certificación y promover a experto",
+        description=(
+            "Permite a un administrador aprobar o rechazar una certificación.\n\n"
+            "Si se envía `promover_a_experto: true` y el nuevo estado es `aprobada`, "
+            "el usuario titular es automáticamente promovido al rol 'experto'."
+        ),
+        request=CertificacionRevisarRequestSerializer,
+        responses={
+            200: CertificacionRevisarResponseSerializer,
+            400: OpenApiResponse(description="Estado inválido."),
+            401: OpenApiResponse(description="No autenticado."),
+            403: OpenApiResponse(description="No autorizado (solo administradores)."),
+            404: OpenApiResponse(description="Certificación no encontrada."),
+        }
+    )
     @action(detail=True, methods=['patch', 'post'], permission_classes=[permissions.IsAdminUser])
     def revisar(self, request, pk=None):
+
         """
         Permite a un administrador aprobar o rechazar una certificación.
         Opcionalmente permite graduar al usuario a 'experto' en el mismo paso si se envía

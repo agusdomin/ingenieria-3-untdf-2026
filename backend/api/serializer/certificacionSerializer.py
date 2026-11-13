@@ -52,3 +52,27 @@ class certificacionSerializer(serializers.ModelSerializer):
                     f"Formato no permitido. Solo se aceptan archivos: {', '.join(extensiones_validas)}"
                 )
         return value
+
+
+class CertificacionRevisarRequestSerializer(serializers.Serializer):
+    estado = serializers.ChoiceField(
+        choices=[Certificacion.Estado.APROBADA, Certificacion.Estado.RECHAZADA],
+        help_text="Nuevo estado de la certificación ('aprobada' o 'rechazada')."
+    )
+    observaciones = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default='',
+        help_text="Observaciones opcionales ingresadas por el administrador."
+    )
+    promover_a_experto = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text="Si es true y la certificación es aprobada, gradúa automáticamente al usuario a rol 'experto'."
+    )
+
+
+class CertificacionRevisarResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    usuario_promovido = serializers.BooleanField()
+    certificacion = certificacionSerializer()

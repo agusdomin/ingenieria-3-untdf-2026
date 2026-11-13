@@ -56,3 +56,15 @@ class usuarioSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         instance.save()
         return instance
+
+
+class CambiarRolRequestSerializer(serializers.Serializer):
+    rol = serializers.ChoiceField(
+        choices=Usuario.Rol.choices,
+        help_text="Nuevo rol para el usuario: 'comun' o 'experto'."
+    )
+
+
+class CambiarRolResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    usuario = usuarioSerializer()
