@@ -27,8 +27,15 @@ export function AuthForm({ onSuccess, onGuest, initialMode = 'login' }: AuthForm
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const submitDisabled = loading || !email.trim() || !password;
+  const inputStyle = (name: string) => [styles.input, fieldStyle(theme), {
+    borderColor: focusedField === name ? theme.colors.primary : theme.colors.inputBorder,
+    borderWidth: focusedField === name ? 2 : 1,
+  }];
 
   const handleSubmit = async () => {
+    if (submitDisabled) return;
     setError(null);
     setLoading(true);
 
@@ -62,6 +69,7 @@ export function AuthForm({ onSuccess, onGuest, initialMode = 'login' }: AuthForm
 
       {isRegistering && (
         <>
+          <Text style={[styles.label, { color: theme.colors.textPrimary }]}>Nombre</Text>
           <TextInput
             accessibilityLabel="Nombre"
             autoComplete="given-name"
@@ -69,8 +77,12 @@ export function AuthForm({ onSuccess, onGuest, initialMode = 'login' }: AuthForm
             placeholderTextColor={theme.colors.inputPlaceholder}
             value={firstName}
             onChangeText={setFirstName}
-            style={[styles.input, fieldStyle(theme)]}
+            editable={!loading}
+            onFocus={() => setFocusedField('firstName')}
+            onBlur={() => setFocusedField(null)}
+            style={inputStyle('firstName')}
           />
+          <Text style={[styles.label, { color: theme.colors.textPrimary }]}>Apellido</Text>
           <TextInput
             accessibilityLabel="Apellido"
             autoComplete="family-name"
@@ -78,22 +90,30 @@ export function AuthForm({ onSuccess, onGuest, initialMode = 'login' }: AuthForm
             placeholderTextColor={theme.colors.inputPlaceholder}
             value={lastName}
             onChangeText={setLastName}
-            style={[styles.input, fieldStyle(theme)]}
+            editable={!loading}
+            onFocus={() => setFocusedField('lastName')}
+            onBlur={() => setFocusedField(null)}
+            style={inputStyle('lastName')}
           />
         </>
       )}
 
+      <Text style={[styles.label, { color: theme.colors.textPrimary }]}>Correo electrónico</Text>
       <TextInput
         accessibilityLabel="Correo electrónico"
         autoCapitalize="none"
         autoComplete="email"
         keyboardType="email-address"
-        placeholder="Correo electrónico"
+        placeholder="nombre@correo.com"
         placeholderTextColor={theme.colors.inputPlaceholder}
         value={email}
         onChangeText={setEmail}
-        style={[styles.input, fieldStyle(theme)]}
+        editable={!loading}
+        onFocus={() => setFocusedField('email')}
+        onBlur={() => setFocusedField(null)}
+        style={inputStyle('email')}
       />
+      <Text style={[styles.label, { color: theme.colors.textPrimary }]}>Contraseña</Text>
       <TextInput
         accessibilityLabel="Contraseña"
         autoComplete={isRegistering ? 'new-password' : 'current-password'}
@@ -102,7 +122,13 @@ export function AuthForm({ onSuccess, onGuest, initialMode = 'login' }: AuthForm
         secureTextEntry
         value={password}
         onChangeText={setPassword}
-        style={[styles.input, fieldStyle(theme)]}
+        editable={!loading}
+        autoCapitalize="none"
+        onFocus={() => setFocusedField('password')}
+        onBlur={() => setFocusedField(null)}
+        returnKeyType="go"
+        onSubmitEditing={handleSubmit}
+        style={inputStyle('password')}
       />
 
       {error && (
@@ -113,13 +139,15 @@ export function AuthForm({ onSuccess, onGuest, initialMode = 'login' }: AuthForm
 
       <Pressable
         accessibilityRole="button"
-        disabled={loading || !email.trim() || !password}
+        disabled={submitDisabled}
+        accessibilityState={{ disabled: submitDisabled, busy: loading }}
         onPress={handleSubmit}
         style={({ pressed }) => [
           styles.primaryButton,
           {
             backgroundColor: theme.colors.primary,
-            opacity: loading || !email.trim() || !password ? 0.55 : pressed ? 0.82 : 1,
+            borderColor: theme.colors.primary,
+            opacity: submitDisabled ? 0.55 : pressed ? 0.82 : 1,
           },
         ]}
       >
@@ -134,11 +162,16 @@ export function AuthForm({ onSuccess, onGuest, initialMode = 'login' }: AuthForm
 
       <Pressable
         accessibilityRole="button"
+        disabled={loading}
         onPress={() => {
           setError(null);
           setIsRegistering((value) => !value);
         }}
-        style={styles.linkButton}
+        style={({ pressed }) => [styles.linkButton, {
+          borderColor: theme.colors.primary,
+          backgroundColor: pressed ? theme.colors.primarySoft : theme.colors.surface,
+          opacity: loading ? 0.55 : 1,
+        }]}
       >
         <Text style={[styles.linkText, { color: theme.colors.primary }]}>
           {isRegistering ? 'Ya tengo una cuenta' : 'Crear una cuenta'}
@@ -146,11 +179,18 @@ export function AuthForm({ onSuccess, onGuest, initialMode = 'login' }: AuthForm
       </Pressable>
 
       {onGuest && (
-        <Pressable accessibilityRole="button" onPress={onGuest} style={styles.guestButton}>
-          <Text style={[styles.guestText, { color: theme.colors.textSecondary }]}>
+        <View style={[styles.guestSection, { borderTopColor: theme.colors.border }]}>
+        <Text style={[styles.guestHint, { color: theme.colors.textMuted }]}>¿Solo querés consultar el mapa?</Text>
+        <Pressable accessibilityRole="button" disabled={loading} onPress={onGuest} style={({ pressed }) => [styles.guestButton, {
+          borderColor: theme.colors.border,
+          backgroundColor: theme.colors.surfaceSecondary,
+          opacity: loading ? 0.55 : pressed ? 0.7 : 1,
+        }]}>
+          <Text style={[styles.guestText, { color: theme.colors.textPrimary }]}>
             Explorar como invitado
           </Text>
         </Pressable>
+        </View>
       )}
     </View>
   );
@@ -168,6 +208,7 @@ const styles = StyleSheet.create({
   form: { gap: 13 },
   heading: { fontSize: 23, fontWeight: '700', letterSpacing: -0.4 },
   description: { fontSize: 14, lineHeight: 20, marginBottom: 4 },
+  label: { fontSize: 13, fontWeight: '600', marginBottom: -6 },
   input: {
     height: 50,
     borderRadius: 13,
@@ -179,13 +220,16 @@ const styles = StyleSheet.create({
   primaryButton: {
     minHeight: 50,
     borderRadius: 15,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 3,
   },
   primaryButtonText: { fontSize: 15, fontWeight: '700' },
-  linkButton: { minHeight: 40, alignItems: 'center', justifyContent: 'center' },
+  linkButton: { minHeight: 50, borderWidth: 1, borderRadius: 15, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
   linkText: { fontSize: 14, fontWeight: '600' },
-  guestButton: { minHeight: 40, alignItems: 'center', justifyContent: 'center' },
+  guestSection: { marginTop: 7, paddingTop: 18, borderTopWidth: 1, gap: 10 },
+  guestHint: { fontSize: 12, textAlign: 'center' },
+  guestButton: { minHeight: 48, borderWidth: 1, borderRadius: 15, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
   guestText: { fontSize: 14, fontWeight: '600' },
 });

@@ -1,4 +1,4 @@
-{/*import { useMemo } from 'react';
+import { useMemo } from 'react';
 import { GeoJSONSource, Layer } from '@maplibre/maplibre-react-native';
 
 import { useTheme } from '../../theme/useTheme';
@@ -28,4 +28,3 @@ export function RiskPolygonLayer({ zones, onSelectZone, id = 'risk-zones' }: Ris
     </GeoJSONSource>
   );
 }
-*/}

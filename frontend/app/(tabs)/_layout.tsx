@@ -72,11 +72,11 @@ export default function TabsLayout() {
           ),
         }}
       />
-      {/* SE AGREGA EL TAB DE USUARIO Y SE QUITA EL DE OFFLINE */}
       <Tabs.Screen
         name="usuario"
         options={{
           title: "Usuario",
+          href: null,
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{

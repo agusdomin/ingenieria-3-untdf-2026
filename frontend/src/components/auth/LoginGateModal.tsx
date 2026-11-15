@@ -5,7 +5,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { SymbolView } from 'expo-symbols';
@@ -60,9 +59,6 @@ export function LoginGateModal({ visible, onDismiss }: LoginGateModalProps) {
             contentContainerStyle={styles.scrollContent}
           >
             <AuthForm onGuest={onDismiss} onSuccess={onDismiss} />
-            <Text style={[styles.footnote, { color: theme.colors.textMuted }]}>
-              El mapa se puede consultar sin iniciar sesión.
-            </Text>
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
@@ -99,5 +95,4 @@ const styles = StyleSheet.create({
   brandMark: { width: 44, height: 44, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   closeButton: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   scrollContent: { paddingBottom: 4 },
-  footnote: { textAlign: 'center', fontSize: 12, marginTop: 12 },
 });

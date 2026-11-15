@@ -3,10 +3,11 @@ import {
   ActivityIndicator,
   Keyboard,
   Modal,
-  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -17,29 +18,27 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { AppBottomSheet } from "../../components/dialogs/AppBottomSheet";
-import { LoginGateModal } from "../../components/auth/LoginGateModal";
-import { useNetwork } from "../../network/NetworkContext";
+import { MapAccountModal } from "../../components/auth/MapAccountModal";
+import { useTrafficByArea } from "../../queries/outings.queries";
+import { zonesGeoJSON } from "../../mocks/zones.mock";
 import { useTheme } from "../../theme/useTheme";
 import { MapContainer } from "../../components/map/MapContainer";
+import { MapLayersSheet } from "../../components/map/MapLayersSheet";
 import { useLocation } from "../../hooks/useLocation";
+import { getZoneColor, getZoneCenter, type ZoneFeature } from "./zoneMap.types";
 import { useCurrentMeteorology } from "../../queries/meteorology.queries";
-import { useTrafficByArea } from "@/queries/outings.queries";
-
-type SelectedArea = {
-  latitude: number;
-  longitude: number;
-  radius: number;
-};
 
 export function MapScreen() {
   const { theme } = useTheme();
-  const { status: networkStatus } = useNetwork();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [showLogin, setShowLogin] = useState(false);
+  const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [focusBounds, setFocusBounds] =
     useState<[number, number, number, number]>();
   const [mapStyle, setMapStyle] = useState<"street" | "terrain">("terrain");
+  const [showLayers, setShowLayers] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
   const {
     latitude,
     longitude,
@@ -51,6 +50,8 @@ export function MapScreen() {
   const [locationNoticeDismissed, setLocationNoticeDismissed] = useState(false);
   const [mapResetVersion, setMapResetVersion] = useState(0);
   const [bottomControlsHeight, setBottomControlsHeight] = useState(54);
+  const bottomSpacing = Math.max(12, insets.bottom);
+  const zoomControlBottom = bottomSpacing + bottomControlsHeight + 12;
   const userLocation = useMemo(
     () =>
       isFallback || latitude === null || longitude === null || locating
@@ -60,44 +61,59 @@ export function MapScreen() {
   );
   const locationMessage = !locating ? error : null;
   const [showSafetyNotice, setShowSafetyNotice] = useState(false);
-  const [selectedArea, setSelectedArea] =
-  useState<SelectedArea | null>(null);
+  const [selectedZone, setSelectedZone] = useState<ZoneFeature | null>(null);
 
- 
+  const trafficCoordinates = useMemo(() => {
+    return selectedZone ? getZoneCenter(selectedZone) : null;
+  }, [selectedZone]);
 
   const trafficQuery = useTrafficByArea(
-    selectedArea
-    ? {
-          latitude: selectedArea.latitude,
-          longitude: selectedArea.longitude,
-          radiusKm: selectedArea.radius / 1000,
+    trafficCoordinates
+      ? {
+          latitude: trafficCoordinates.latitude,
+          longitude: trafficCoordinates.longitude,
+          radiusKm: 5,
         }
       : null,
   );
 
   const meteorologyQuery = useCurrentMeteorology(
-    selectedArea
+    trafficCoordinates
       ? {
-          latitude: selectedArea.latitude,
-          longitude: selectedArea.longitude,
+          latitude: trafficCoordinates.latitude,
+          longitude: trafficCoordinates.longitude,
         }
       : null,
   );
 
-  const handleMapPress = useCallback(
-  (coordinate: [number, number]) => {
-    const [longitude, latitude] = coordinate;
+  const features = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase();
+    return zonesGeoJSON.features.filter((feature) =>
+      feature.properties.name.toLocaleLowerCase().includes(query),
+    );
+  }, [search]);
 
+  function selectSearchResult(feature: ZoneFeature) {
+    const coordinates = feature.geometry.coordinates.flat();
+    const longitudes = coordinates.map(([longitude]) => longitude);
+    const latitudes = coordinates.map(([, latitude]) => latitude);
+    setFocusBounds([
+      Math.min(...longitudes),
+      Math.min(...latitudes),
+      Math.max(...longitudes),
+      Math.max(...latitudes),
+    ]);
+    setSearch(feature.properties.name);
+    setSearchOpen(false);
+    Keyboard.dismiss();
+  }
+
+  const handleZonePress = useCallback((zonaId: string) => {
     Keyboard.dismiss();
 
-    setSelectedArea({
-      latitude,
-      longitude,
-      radius: 500,
-    });
-  },
-  [],
-);
+    const zone = zonesGeoJSON.features.find((feature) => feature.properties.id === zonaId);
+    if (zone) setSelectedZone(zone);
+  }, []);
 
   const locateMe = useCallback(async () => {
     setLocationNoticeDismissed(false);
@@ -109,18 +125,17 @@ export function MapScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
-      {showLogin ? (
-        <LoginGateModal visible onDismiss={() => setShowLogin(false)} />
-      ) : null}
       <View style={StyleSheet.absoluteFill}>
         <MapContainer
-  key={mapResetVersion}
-  focusBounds={focusBounds}
-  mapStyle={mapStyle}
-  userLocation={userLocation}
-  zoomControlTop={insets.top + 169}
-  onMapPress={handleMapPress}
-/>
+          key={mapResetVersion}
+          focusBounds={focusBounds}
+          mapStyle={mapStyle}
+          showRiskZones={false}
+          onZonePress={handleZonePress}
+          userLocation={userLocation}
+          zoomControlTop={insets.top + 64}
+          zoomControlBottom={zoomControlBottom}
+        />
       </View>
 
       <SafeAreaView
@@ -137,69 +152,109 @@ export function MapScreen() {
             },
           ]}
         >
-          <View style={styles.locationHeading}>
-  <Text
-    numberOfLines={1}
-    style={[
-      styles.areaTitle,
-      { color: theme.colors.textPrimary },
-    ]}
-  >
-    Mapa de Ushuaia
-  </Text>
-
-  <Text
-    style={[
-      styles.areaMeta,
-      { color: theme.colors.textMuted },
-    ]}
-  >
-    Tocá un punto del mapa para consultar el área
-  </Text>
-</View>
-          <View style={styles.statusRow}>
-            <View
-              style={[
-                styles.statusPill,
-                { backgroundColor: theme.colors.surfaceSecondary },
-              ]}
-            >
-          
-  
-            </View>
-            <View
-              style={[
-                styles.statusPill,
-                { backgroundColor: theme.colors.surfaceSecondary },
-              ]}
-            >
-              <View
-                style={[
-                  styles.statusDot,
-                  {
-                    backgroundColor:
-                      networkStatus === "online"
-                        ? theme.colors.success
-                        : networkStatus === "offline"
-                          ? theme.colors.warning
-                          : theme.colors.textMuted,
-                  },
-                ]}
-              />
-              <Text
-                style={[
-                  styles.statusText,
-                  { color: theme.colors.textSecondary },
-                ]}
+          <View style={styles.searchRow}>
+            <SymbolView
+              name={{
+                ios: "magnifyingglass",
+                android: "search",
+                web: "search",
+              }}
+              tintColor={theme.colors.textMuted}
+              size={20}
+            />
+            <TextInput
+              accessibilityLabel="Buscar zona"
+              value={search}
+              onChangeText={(value) => {
+                setSearch(value);
+                setSearchOpen(true);
+              }}
+              onFocus={() => setSearchOpen(true)}
+              onSubmitEditing={() => {
+                if (features.length === 1) selectSearchResult(features[0]);
+              }}
+              placeholder="Buscar zona"
+              placeholderTextColor={theme.colors.inputPlaceholder}
+              returnKeyType="search"
+              style={[styles.searchInput, { color: theme.colors.textPrimary }]}
+            />
+            {search.length > 0 && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Borrar búsqueda"
+                hitSlop={8}
+                onPress={() => {
+                  setSearch("");
+                  setSearchOpen(false);
+                }}
               >
-                {networkStatus === "online"
-                  ? "En línea"
-                  : networkStatus === "offline"
-                    ? "Sin conexión"
-                    : "Comprobando red"}
-              </Text>
-            </View>
+                <Text style={{ color: theme.colors.textPrimary, fontSize: 24 }}>
+                  ×
+                </Text>
+              </Pressable>
+            )}
           </View>
+          {searchOpen && search.trim().length > 0 && (
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              style={{ maxHeight: 200 }}
+            >
+              {features.length === 0 ? (
+                <Text
+                  accessibilityLiveRegion="polite"
+                  style={{
+                    color: theme.colors.textSecondary,
+                    paddingVertical: 12,
+                  }}
+                >
+                  No se encontraron zonas
+                </Text>
+              ) : (
+                features.map((feature) => (
+                  <Pressable
+                    key={feature.properties.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Centrar ${feature.properties.name}`}
+                    onPress={() => selectSearchResult(feature)}
+                    style={{ paddingVertical: 12, minHeight: 48 }}
+                  >
+                    <Text
+                      style={{
+                        color: theme.colors.textPrimary,
+                        fontWeight: "600",
+                      }}
+                    >
+                      {feature.properties.name}
+                    </Text>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <View
+                        style={[
+                          styles.statusDot,
+                          {
+                            backgroundColor: getZoneColor(feature.properties.riskLevel, theme),
+                          },
+                        ]}
+                      />
+                      <Text
+                        style={{
+                          color: theme.colors.textSecondary,
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        Riesgo {feature.properties.riskLevel}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))
+              )}
+            </ScrollView>
+          )}
         </View>
 
         <Pressable
@@ -223,22 +278,27 @@ export function MapScreen() {
         </Pressable>
       </SafeAreaView>
 
-      <View style={[styles.mapControls, { top: insets.top + 63 }]}>
+
+      <View style={[styles.mapControls, { bottom: zoomControlBottom + 114 }]}>
         <MapControl
-          label={
-            mapStyle === "terrain"
-              ? "Cambiar a mapa callejero"
-              : "Cambiar a mapa topográfico"
-          }
-          icon={
-            mapStyle === "terrain"
-              ? { ios: "square.3.layers.3d", android: "layers", web: "layers" }
-              : { ios: "mountain.2", android: "terrain", web: "terrain" }
-          }
-          active={mapStyle === "terrain"}
-          onPress={() =>
-            setMapStyle((style) => (style === "terrain" ? "street" : "terrain"))
-          }
+          label="Mi cuenta"
+          icon={{ ios: "person.crop.circle", android: "account_circle", web: "account_circle" }}
+          active={showAccount}
+          onPress={() => {
+            Keyboard.dismiss();
+            setSearchOpen(false);
+            setShowAccount(true);
+          }}
+        />
+        <MapControl
+          label="Capas del mapa"
+          icon={{ ios: "square.3.layers.3d", android: "layers", web: "layers" }}
+          active={showLayers}
+          onPress={() => {
+            Keyboard.dismiss();
+            setSearchOpen(false);
+            setShowLayers(true);
+          }}
         />
         <Pressable
           accessibilityLabel="Mostrar mi ubicación"
@@ -277,8 +337,8 @@ export function MapScreen() {
           style={[
             styles.locationNotice,
             {
-              bottom:
-                (Platform.OS === "web" ? 12 : 10) + bottomControlsHeight + 12,
+              bottom: zoomControlBottom,
+              right: 76,
               backgroundColor: theme.colors.surface,
               borderColor: theme.colors.border,
             },
@@ -321,38 +381,10 @@ export function MapScreen() {
         }
         style={[
           styles.bottomOverlay,
-          { bottom: Platform.OS === "web" ? 12 : 10 },
+          { bottom: bottomSpacing },
         ]}
       >
-        <View
-          style={[
-            styles.legend,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-            },
-          ]}
-        >
-          {[
-            { label: "Bajo", color: theme.risk.bajo },
-            { label: "Considerable", color: theme.risk.considerable },
-            { label: "Alto", color: theme.risk.alto },
-          ].map((item) => (
-            <View key={item.label} style={styles.legendItem}>
-              <View
-                style={[styles.legendDot, { backgroundColor: item.color }]}
-              />
-              <Text
-                style={[
-                  styles.legendLabel,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                {item.label}
-              </Text>
-            </View>
-          ))}
-        </View>
+        <View />
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Crear reporte"
@@ -381,6 +413,13 @@ export function MapScreen() {
         </Pressable>
       </View>
 
+      <MapLayersSheet
+        visible={showLayers}
+        onClose={() => setShowLayers(false)}
+        mapStyle={mapStyle}
+        onMapStyleChange={setMapStyle}
+      />
+      {showAccount ? <MapAccountModal onDismiss={() => setShowAccount(false)} /> : null}
       <Modal
         animationType="fade"
         transparent
@@ -426,9 +465,9 @@ export function MapScreen() {
             <Text
               style={[styles.noticeBody, { color: theme.colors.textSecondary }]}
             >
-              La información mostrada en el mapa es orientativa.
-  Consultá los reportes y boletines disponibles antes de
-  tomar decisiones en terreno.
+              Este mapa contiene zonas y niveles de peligro ilustrativos. No es
+              un pronóstico oficial ni debe usarse para tomar decisiones en
+              terreno.
             </Text>
             <Pressable
               accessibilityRole="button"
@@ -450,15 +489,17 @@ export function MapScreen() {
           </View>
         </View>
       </Modal>
-      {/* Panel inferior con información del area */}
+      {/* Panel inferior con información de la zona */}
 
-     
+      {/* Panel inferior con información de la zona */}
       <AppBottomSheet
-        visible={selectedArea !== null}
-        onClose={() => setSelectedArea(null)}
-        title="Área seleccionada"  >
-        {selectedArea && (
+        visible={selectedZone !== null}
+        onClose={() => setSelectedZone(null)}
+        title={selectedZone?.properties.name ?? "Información de la zona"}
+      >
+        {selectedZone && (
           <View style={styles.zoneDetails}>
+            {/* Nivel de riesgo */}
             <View style={styles.zoneRiskContainer}>
               <Text
                 style={[
@@ -466,31 +507,32 @@ export function MapScreen() {
                   { color: theme.colors.textSecondary },
                 ]}
               >
-               Coordenadas
+                Nivel de riesgo
               </Text>
-        <Text
-          style={{
-           color: theme.colors.textPrimary,
-            fontWeight: "600",
-        }}
-      >
-        {selectedArea.latitude.toFixed(5)},{" "}
-        {selectedArea.longitude.toFixed(5)}
-      </Text>
 
-      <Text
-        style={[
-          styles.zoneLabel,
-          { color: theme.colors.textSecondary },
-        ]}
-      >
-        Radio
-      </Text>
+              <View
+                style={[
+                  styles.zoneRiskBadge,
+                  {
+                    backgroundColor: getZoneColor(selectedZone.properties.riskLevel, theme),
+                  },
+                ]}
+              >
+                <Text style={styles.zoneRiskText}>
+                  {selectedZone.properties.riskLevel.toUpperCase()}
+                </Text>
+              </View>
 
-      <Text style={{ color: theme.colors.textPrimary }}>
-        {selectedArea.radius} m
-      </Text>
-              
+              <Text
+                style={[
+                  styles.zoneDescription,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
+                Información ilustrativa de esta zona. Los niveles de riesgo
+                mostrados corresponden a datos de ejemplo y no representan un
+                pronóstico oficial.
+              </Text>
             </View>
 
             {/* Tránsito de personas */}
@@ -575,7 +617,7 @@ export function MapScreen() {
                   nuevamente más tarde.
                 </Text>
               )}
-              {/* DATOS METEREOLOGICOS DEl AREA */}
+              {/* DATOS METEREOLOGICOS DE LA ZONA */}
               {meteorologyQuery.isSuccess && (
                 <>
                   <View style={styles.zoneWeatherMain}>
@@ -706,9 +748,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 22,
     paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 11,
-    gap: 10,
+    paddingVertical: 5,
     shadowColor: "#000",
     shadowOpacity: 0.16,
     shadowRadius: 15,
@@ -728,26 +768,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     paddingVertical: 4,
   },
-  accountButton: {
-    width: 34,
-    height: 34,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  locationHeading: { gap: 1 },
-  areaTitle: { fontSize: 15, fontWeight: "700", letterSpacing: -0.2 },
-  areaMeta: { fontSize: 12 },
-  statusRow: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  statusPill: {
-    minHeight: 28,
-    borderRadius: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 9,
-  },
   statusDot: { width: 7, height: 7, borderRadius: 4 },
-  statusText: { fontSize: 11, fontWeight: "600" },
   safetyButton: {
     width: 46,
     height: 46,
