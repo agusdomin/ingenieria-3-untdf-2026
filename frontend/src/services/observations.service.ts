@@ -12,18 +12,6 @@ export const getObservations =
 
     return response.data;
   };
-/*
-export const getObservationsByZone =
-  async (
-    zoneId: string
-  ): Promise<Observation[]> => {
-    const response =
-      await api.get(
-        `/zones/${zoneId}/observations`
-      );
-
-    return response.data;
-  };*/
 
 export const createObservation =
   async (

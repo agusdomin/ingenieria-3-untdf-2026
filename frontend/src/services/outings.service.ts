@@ -1,12 +1,10 @@
-import { api } from '../api/client';
-
-
 import {
-  TrafficByZoneParams,
-  TrafficByZoneResponse,
+  TrafficByAreaParams,
+  TrafficByAreaResponse,
   CreateOutingDTO,
   Outing,
 } from '../types/outing';
+import { api } from '../api/client';
 
 export const getOutings =
   async (): Promise<Outing[]> => {
@@ -29,46 +27,21 @@ export const createOuting =
     return response.data;
   };
 
-export const getTrafficByZone = async (
-  params: TrafficByZoneParams
-): Promise<TrafficByZoneResponse> => {
-  const response = await api.get<TrafficByZoneResponse>(
-    '/planes-salida/trafico/',
-    {
-      params: {
-        lat: params.latitude,
-        lon: params.longitude,
-        radio: params.radiusKm ?? 5,
-      },
-    }
-  );
+
+export const getTrafficByArea = async (
+  params: TrafficByAreaParams
+): Promise<TrafficByAreaResponse> => {
+  const response =
+    await api.get<TrafficByAreaResponse>(
+      '/planes-salida/trafico/',
+      {
+        params: {
+          lat: params.latitude,
+          lon: params.longitude,
+          radio: params.radiusKm ?? 5,
+        },
+      }
+    );
 
   return response.data;
 };
-
-
-
-/*
-export const getOutingsByZone =
-  async (
-    zoneId: string
-  ): Promise<Outing[]> => {
-    const response =
-      await api.get(
-        `/zones/${zoneId}/outings`
-      );
-
-    return response.data;
-  };
-
-export const getTrafficByZone =
-  async (
-    zoneId: string
-  ): Promise<TrafficLevel> => {
-    const response =
-      await api.get(
-        `/zones/${zoneId}/traffic`
-      );
-
-    return response.data;
-  };*/

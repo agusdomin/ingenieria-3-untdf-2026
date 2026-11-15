@@ -2,11 +2,20 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Camera, GeoJSONSource, Layer, Map, type CameraRef, type StyleSpecification } from '@maplibre/maplibre-react-native';
 import { useTheme } from '../../theme/useTheme';
-import { RiskPolygonLayer } from './RiskPolygonLayer';
 import { LocationControl } from './LocationControl';
 import { INITIAL_CENTER, INITIAL_ZOOM, type MapContainerProps } from './MapContainer.types';
 
-export function MapContainerNative({ features, focusBounds, onZonePress, mapStyle, userLocation, zoomControlTop, children, onLoad, onError, onMapPress, onCameraChange, onLocate, locating }: MapContainerProps) {
+export function MapContainerNative({   focusBounds,
+  mapStyle,
+  userLocation,
+  zoomControlTop,
+  children,
+  onLoad,
+  onError,
+  onMapPress,
+  onCameraChange,
+  onLocate,
+  locating, }: MapContainerProps) {
   const { theme } = useTheme();
   const camera = useRef<CameraRef>(null);
   const zoom = useRef(INITIAL_ZOOM);
@@ -24,10 +33,7 @@ export function MapContainerNative({ features, focusBounds, onZonePress, mapStyl
     },
     layers: [{ id: 'base', type: 'raster', source: 'base' }],
   }), [mapStyle, maxZoom]);
-  const data = useMemo(() => ({
-    type: 'FeatureCollection' as const,
-    features,
-  }), [features]);
+
 
   useEffect(() => {
     if (ready && userLocation) {
@@ -37,7 +43,7 @@ export function MapContainerNative({ features, focusBounds, onZonePress, mapStyl
 
   useEffect(() => {
     if (ready && focusBounds) {
-      camera.current?.fitBounds(focusBounds, { padding: { top: zoomControlTop + 32, bottom: 120, left: 72, right: 72 }, duration: 600 });
+      camera.current?.fitBounds(focusBounds, { padding: { top: (zoomControlTop ?? 0) + 32, bottom: 120, left: 72, right: 72 }, duration: 600 });
     }
   }, [ready, focusBounds, zoomControlTop]);
 
@@ -60,7 +66,6 @@ export function MapContainerNative({ features, focusBounds, onZonePress, mapStyl
         }}
       >
         <Camera ref={camera} initialViewState={{ center: INITIAL_CENTER, zoom: INITIAL_ZOOM }} minZoom={2} maxZoom={maxZoom} />
-        <RiskPolygonLayer zones={data} onSelectZone={onZonePress} />
         {userLocation && (
           <GeoJSONSource id="user-location" data={{ type: 'Point', coordinates: [userLocation.longitude, userLocation.latitude] }}>
             <Layer id="user-dot" type="circle" paint={{ 'circle-radius': 8, 'circle-color': theme.colors.primary, 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 3 }} />

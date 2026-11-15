@@ -1,5 +1,5 @@
 
-export interface MeteorologyByZoneParams {
+export interface MeteorologyByLocationParams {
   latitude: number;
   longitude: number;
 }

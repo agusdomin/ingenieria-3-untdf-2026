@@ -11,14 +11,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SymbolView, type SymbolViewProps } from "expo-symbols";
-import { zonesGeoJSON } from '../../mocks/zones.mock';
 import { DateRangePicker, AppTimePicker } from "../../components/forms";
 
 import { useCreateOuting } from "../../queries/outings.queries";
-import { getZoneCenter, type ZoneFeature } from "../map/zoneMap.types";
 import { useTheme } from "../../theme/useTheme";
 
-const zones = zonesGeoJSON.features.map(({ properties }) => ({ value: properties.id, label: properties.name }));
 const dateLabel = (date: Date) =>
   date.toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
 const timeLabel = (date: Date) =>
@@ -43,23 +40,17 @@ export function PlanningScreen() {
   const { theme } = useTheme();
   const createOutingMutation = useCreateOuting();
   
-  const [zone, setZone] = useState("");
-  const [departure, setDeparture] = useState(() => initialTime(8));
+const [coordinates, setCoordinates] = useState<{
+  latitude: number;
+  longitude: number;
+} | null>(null);  const [departure, setDeparture] = useState(() => initialTime(8));
   const [returnDate, setReturnDate] = useState(() => initialTime(16, 30));
   const [companions, setCompanions] = useState(0);
   const [editor, setEditor] = useState<
-    "zone" | "schedule" | "group" | "review" | null
+    "location" | "schedule" | "group" | "review" | null
   >(null);
   const [showErrors, setShowErrors] = useState(false);
-  const selectedZoneFeature = zonesGeoJSON.features.find(
-  (feature) => feature.properties.id === zone
-);
- const selectedZone = zones.find((item) => item.value === zone);
 
-
-  const selectedZoneCenter = selectedZoneFeature
-  ? getZoneCenter(selectedZoneFeature)
-  : null;
   const invalidDates = returnDate <= departure;
   const primaryText = { color: theme.colors.textPrimary };
   const secondaryText = { color: theme.colors.textSecondary };
@@ -69,45 +60,51 @@ export function PlanningScreen() {
   };
 
   function handleCreateOuting() {
-    if (!selectedZoneFeature || !selectedZoneCenter) {
-      Alert.alert(
-        "Zona inválida",
-        "No se pudieron obtener las coordenadas de la zona seleccionada.",
-      );
-      return;
-    }
-
-    createOutingMutation.mutate(
-      {
-        coordenadas: {
-          latitude: selectedZoneCenter.latitude,
-          longitude: selectedZoneCenter.longitude,
-        },
-        fecha_hora_inicio: departure.toISOString(),
-        fecha_hora_retorno: returnDate.toISOString(),
-        cantidad_acompanantes: companions,
-        itinerario_descripcion: `Salida planificada hacia ${selectedZoneFeature.properties.name}.`,
-      },
-      {
-        onSuccess: () => {
-          Alert.alert(
-            "Salida registrada",
-            "Tu planificación se guardó correctamente.",
-          );
-          reset();
-        },
-        onError: () => {
-          Alert.alert(
-            "No se pudo registrar",
-            "Verificá tu conexión y que hayas iniciado sesión para registrar una salida.",
-          );
-        },
-      },
+  if (!coordinates) {
+    Alert.alert(
+      "Ubicación requerida",
+      "Seleccioná una ubicación para planificar la salida."
     );
+    return;
   }
 
+  createOutingMutation.mutate(
+    {
+      coordenadas: {
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+      },
+
+      fecha_hora_inicio: departure.toISOString(),
+      fecha_hora_retorno: returnDate.toISOString(),
+      cantidad_acompanantes: companions,
+
+      itinerario_descripcion:
+        "Salida planificada desde la ubicación seleccionada.",
+    },
+
+    {
+      onSuccess: () => {
+        Alert.alert(
+          "Salida registrada",
+          "Tu planificación se guardó correctamente."
+        );
+
+        reset();
+      },
+
+      onError: () => {
+        Alert.alert(
+          "No se pudo registrar",
+          "Verificá tu conexión y que hayas iniciado sesión para registrar una salida."
+        );
+      },
+    }
+  );
+}
+
   function reset() {
-    setZone("");
+setCoordinates(null);
     setDeparture(initialTime(8));
     setReturnDate(initialTime(16, 30));
     setCompanions(0);
@@ -140,20 +137,25 @@ export function PlanningScreen() {
             Declaración de itinerario
           </Text>
           <PlanningRow
-            label="Objetivo"
-            value={selectedZone?.label ?? "Seleccionar zona"}
-            icon={{
-              ios: "mappin.and.ellipse",
-              android: "location_on",
-              web: "location_on",
-            }}
-            onPress={() => setEditor("zone")}
-          />
-          {showErrors && !zone ? (
-            <Text style={{ color: theme.colors.danger }}>
-              Seleccioná una zona.
-            </Text>
-          ) : null}
+  label="Ubicación"
+  value={
+    coordinates
+      ? `${coordinates.latitude.toFixed(5)}, ${coordinates.longitude.toFixed(5)}`
+      : "Seleccionar ubicación"
+  }
+  icon={{
+    ios: "mappin.and.ellipse",
+    android: "location_on",
+    web: "location_on",
+  }}
+  onPress={() => setEditor("location")}
+/>
+
+{showErrors && !coordinates ? (
+  <Text style={{ color: theme.colors.danger }}>
+    Seleccioná una ubicación.
+  </Text>
+) : null}
           <PlanningRow
             label="Salida / regreso"
             value={`${timeLabel(departure)} – ${timeLabel(returnDate)}`}
@@ -198,16 +200,16 @@ export function PlanningScreen() {
             tintColor={theme.colors.warning}
           />
           <Text style={[styles.noticeText, primaryText]}>
-            Consultá el boletín y las condiciones del manto antes de salir. El
-            peligro de la zona aún no está disponible en esta vista.
-          </Text>
+  Consultá el boletín y las condiciones del manto antes de salir.
+  El peligro del área seleccionada aún no está disponible en esta vista.
+</Text>
         </View>
 
         <Pressable
           accessibilityRole="button"
           onPress={() => {
             setShowErrors(true);
-            if (zone && !invalidDates) setEditor("review");
+            if (coordinates && !invalidDates) setEditor("review");
           }}
           style={({ pressed }) => [
             styles.primaryButton,
@@ -251,10 +253,7 @@ export function PlanningScreen() {
             Cancelar planificación
           </Text>
         </Pressable>
-        <Text style={[styles.prototypeNote, secondaryText]}>
-          Vista previa · Zonas de ejemplo. El registro estará disponible al
-          integrar la API; estos datos no se guardan ni se envían.
-        </Text>
+        
       </ScrollView>
 
       <Modal
@@ -270,8 +269,8 @@ export function PlanningScreen() {
                 accessibilityRole="header"
                 style={[styles.sheetTitle, primaryText]}
               >
-                {editor === "zone"
-                  ? "Elegir objetivo"
+               {editor === "location"
+                  ? "Elegir ubicación"
                   : editor === "schedule"
                     ? "Salida y regreso"
                     : editor === "group"
@@ -292,99 +291,51 @@ export function PlanningScreen() {
               </Pressable>
             </View>
             <ScrollView contentContainerStyle={styles.editorContent}>
-              {editor === "zone" ? (
-                <>
-                  <Text style={[theme.typography.bodySmall, secondaryText]}>
-                    Elegí la zona que vas a recorrer.
-                  </Text>
-                  <View style={styles.zoneList}>                  
-                    {zones.map((option) => {
-                      const selected = zone === option.value;
-                      return (
-                        <Pressable
-                          key={option.value}
-                          accessibilityRole="radio"
-                          accessibilityState={{ checked: selected }}
-                          accessibilityLabel={option.label}
-                          onPress={() => setZone(option.value)}
-                          style={({ pressed }) => [
-                            styles.zoneOption,
-                            {
-                              backgroundColor: selected
-                                ? theme.colors.primarySoft
-                                : theme.colors.surfaceSecondary,
-                              borderColor: selected
-                                ? theme.colors.primary
-                                : theme.colors.border,
-                              opacity: pressed ? 0.75 : 1,
-                            },
-                          ]}
-                        >
-                          <View
-                            style={[
-                              styles.zoneIcon,
-                              { backgroundColor: theme.colors.surface },
-                            ]}
-                          >
-                            <SymbolView
-                              name={{
-                                ios: "mountain.2",
-                                android: "terrain",
-                                web: "terrain",
-                              }}
-                              size={23}
-                              tintColor={theme.colors.primary}
-                            />
-                          </View>
-                          <View style={styles.zoneCopy}>
-                            <Text
-                              style={[
-                                theme.typography.body,
-                                {
-                                  fontWeight: "600",
-                                  color: theme.colors.textPrimary,
-                                },
-                              ]}
-                            >
-                              {option.label}
-                            </Text>
-                            <Text
-                              style={[theme.typography.caption, secondaryText]}
-                            >
-                              Zona disponible
-                            </Text>
-                          </View>
-                          <View
-                            style={[
-                              styles.zoneRadio,
-                              {
-                                borderColor: selected
-                                  ? theme.colors.primary
-                                  : theme.colors.textMuted,
-                                backgroundColor: selected
-                                  ? theme.colors.primary
-                                  : "transparent",
-                              },
-                            ]}
-                          >
-                            {selected ? (
-                              <SymbolView
-                                name={{
-                                  ios: "checkmark",
-                                  android: "check",
-                                  web: "check",
-                                }}
-                                size={15}
-                                tintColor={theme.colors.textInverse}
-                              />
-                            ) : null}
-                          </View>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </>
-              ) : null}
+              {editor === "location" ? (
+  <>
+    <Text
+      style={[
+        theme.typography.bodySmall,
+        secondaryText,
+      ]}
+    >
+      Seleccioná la ubicación de la salida.
+    </Text>
+
+    <View
+      style={[
+        styles.locationCard,
+        {
+          backgroundColor: theme.colors.surfaceSecondary,
+          borderColor: theme.colors.border,
+        },
+      ]}
+    >
+      {coordinates ? (
+        <>
+<Text style={[styles.sectionTitle, primaryText]}>            Ubicación seleccionada
+          </Text>
+
+          <Text style={secondaryText}>
+            Latitud: {coordinates.latitude.toFixed(5)}
+          </Text>
+
+          <Text style={secondaryText}>
+            Longitud: {coordinates.longitude.toFixed(5)}
+          </Text>
+        </>
+      ) : (
+        <Text style={secondaryText}>
+          Todavía no seleccionaste una ubicación.
+        </Text>
+      )}
+    </View>
+
+    <Text style={[styles.prototypeNote, secondaryText]}>
+      La selección de coordenadas desde el mapa se integrará en esta vista.
+    </Text>
+  </>
+) : null}
               {editor === "schedule" ? (
                 <>
                   <DateRangePicker
@@ -518,8 +469,14 @@ export function PlanningScreen() {
               {editor === "review" ? (
                 <>
                   <Text style={[styles.sectionTitle, primaryText]}>
-                    {selectedZone?.label}
-                  </Text>
+  Ubicación seleccionada
+</Text>
+
+<Text style={secondaryText}>
+  {coordinates
+    ? `${coordinates.latitude.toFixed(5)}, ${coordinates.longitude.toFixed(5)}`
+    : "Sin ubicación"}
+</Text>
                   <Text style={secondaryText}>
                     Salida: {dateLabel(departure)} · {timeLabel(departure)}
                   </Text>
@@ -579,32 +536,36 @@ export function PlanningScreen() {
                 </>
               ) : null}
               <Pressable
-                accessibilityRole="button"
-                disabled={editor === "zone" && !zone}
-                onPress={() => setEditor(null)}
-                style={({ pressed }) => [
-                  styles.primaryButton,
-                  {
-                    backgroundColor: theme.colors.primary,
-                    borderColor: theme.colors.primary,
-                    opacity:
-                      editor === "zone" && !zone ? 0.45 : pressed ? 0.75 : 1,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.buttonText,
-                    { color: theme.colors.textInverse },
-                  ]}
-                >
-                  {editor === "review"
-                    ? "Volver a editar"
-                    : editor === "zone"
-                      ? "Usar esta zona"
-                      : "Listo"}
-                </Text>
-              </Pressable>
+  accessibilityRole="button"
+  disabled={editor === "location" && !coordinates}
+  onPress={() => setEditor(null)}
+  style={({ pressed }) => [
+    styles.primaryButton,
+    {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+      opacity:
+        editor === "location" && !coordinates
+          ? 0.45
+          : pressed
+            ? 0.75
+            : 1,
+    },
+  ]}
+>
+  <Text
+    style={[
+      styles.buttonText,
+      { color: theme.colors.textInverse },
+    ]}
+  >
+    {editor === "review"
+      ? "Volver a editar"
+      : editor === "location"
+        ? "Usar esta ubicación"
+        : "Listo"}
+  </Text>
+</Pressable>
             </ScrollView>
           </SafeAreaView>
         </View>
@@ -772,32 +733,6 @@ const styles = StyleSheet.create({
   },
   editorContent: { paddingHorizontal: 20, paddingBottom: 24, gap: 16 },
   groupCard: { padding: 18, borderWidth: 1, borderRadius: 18, gap: 20 },
-  zoneList: { gap: 12 },
-  zoneOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 14,
-    minHeight: 80,
-    borderWidth: 1,
-    borderRadius: 16,
-  },
-  zoneIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  zoneCopy: { flex: 1, gap: 5 },
-  zoneRadio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   groupHeading: { flexDirection: "row", alignItems: "center", gap: 10 },
   groupSummary: {
     borderTopWidth: 1,
@@ -807,6 +742,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
+  locationCard: {
+  padding: 16,
+  borderWidth: 1,
+  borderRadius: 16,
+  gap: 8,
+},
   counter: {
     flexDirection: "row",
     alignItems: "center",

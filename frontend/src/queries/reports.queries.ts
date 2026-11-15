@@ -10,8 +10,6 @@ import {
     createReport,
     getReport,
     getReports,
-    //getReportsByZone,
-    //rateReport,
   } from '../services/reports.service';
   
   export const useReports =
@@ -38,25 +36,6 @@ import {
       enabled: Boolean(id),
     });
   };
-  /*
-  export const useReportsByZone =
-    (
-      zoneId: string
-    ) => {
-      return useQuery({
-        queryKey:
-          queryKeys.reports.byZone(
-            zoneId
-          ),
-  
-        queryFn: () =>
-          getReportsByZone(
-            zoneId
-          ),
-  
-        enabled: Boolean(zoneId),
-      });
-    };*/
   
   export const useCreateReport =
     () => {
@@ -74,41 +53,7 @@ import {
             queryKey:
               queryKeys.reports.all,
           });
-  /*
-          queryClient.invalidateQueries({
-            queryKey:
-              queryKeys.reports.byZone(
-                report.zoneId
-              ),
-          });
-  
-          queryClient.invalidateQueries({
-            queryKey:
-              queryKeys.analyses.all,
-          });*/
         },
       });
     };
-  /*
-  export const useRateReport =
-    () => {
-      const queryClient =
-        useQueryClient();
-  
-      return useMutation({
-        mutationFn:
-          rateReport,
-  
-        onSuccess: (
-          _,
-          variables
-        ) => {
-          queryClient.invalidateQueries({
-            queryKey:
-              queryKeys.reports.detail(
-                variables.reportId
-              ),
-          });
-        },
-      });
-    };*/
+ 

@@ -41,7 +41,7 @@ export interface CreateOutingDTO {
   estado?: OutingStatus;
 }
 // INTERFAZ PARA LAS CONSULTAS DEL TRAFICO POR ZONA
-export interface TrafficByZoneResponse {
+export interface TrafficByAreaResponse {
   coordenadas: {
     latitud: number;
     longitud: number;
@@ -51,7 +51,7 @@ export interface TrafficByZoneResponse {
   total_personas: number;
 }
 
-export interface TrafficByZoneParams {
+export interface TrafficByAreaParams {
   latitude: number;
   longitude: number;
   radiusKm?: number;

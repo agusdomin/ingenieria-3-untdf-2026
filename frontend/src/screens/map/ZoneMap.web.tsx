@@ -3,10 +3,16 @@ import type { Map as LeafletMap } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 import { useTheme } from '../../theme/useTheme';
-import { getZoneColor, getZoneCoordinates } from './zoneMap.types';
 import { INITIAL_CENTER, INITIAL_ZOOM, type MapContainerProps } from '../../components/map/MapContainer.types';
 
-export function ZoneMap({ features, focusBounds, onZonePress, mapStyle, userLocation, zoomControlTop, onLoad, onError, onMapPress, onCameraChange }: MapContainerProps) {
+export function ZoneMap({ focusBounds,
+  mapStyle,
+  userLocation,
+  zoomControlTop,
+  onLoad,
+  onError,
+  onMapPress,
+  onCameraChange, }: MapContainerProps) {
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState(false);
@@ -17,7 +23,7 @@ export function ZoneMap({ features, focusBounds, onZonePress, mapStyle, userLoca
     if (!focusBounds || !mapRef.current) return;
     const [west, south, east, north] = focusBounds;
     mapRef.current.flyToBounds([[south, west], [north, east]], {
-      paddingTopLeft: [72, zoomControlTop + 32], paddingBottomRight: [72, 120], maxZoom: 16, duration: 0.6,
+      paddingTopLeft: [72, (zoomControlTop ?? 0) + 32], paddingBottomRight: [72, 120], maxZoom: 16, duration: 0.6,
     });
   }, [focusBounds, mapVersion, zoomControlTop]);
 
@@ -50,8 +56,9 @@ export function ZoneMap({ features, focusBounds, onZonePress, mapStyle, userLoca
         }
         const zoomControlPosition = zoomControl.getContainer()?.parentElement;
         if (zoomControlPosition) {
-          zoomControlPosition.style.top = `${zoomControlTop}px`;
-          zoomControlPosition.style.right = '35px';
+          zoomControlPosition.style.top =
+         `${zoomControlTop ?? 0}px`;
+            zoomControlPosition.style.right = '35px';
         }
 
         const tileUrl = mapStyle === 'terrain'
@@ -64,21 +71,6 @@ export function ZoneMap({ features, focusBounds, onZonePress, mapStyle, userLoca
             : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         }).addTo(currentMap);
 
-        features.forEach((feature) => {
-          const coordinates = getZoneCoordinates(feature).map(
-            ({ latitude, longitude }): [number, number] => [latitude, longitude]
-          );
-          const polygon = L.polygon(coordinates, {
-            color: getZoneColor(feature.properties.riskLevel, theme),
-            fillOpacity: 0.45,
-            weight: 2,
-          }).addTo(currentMap);
-
-          const label = document.createElement('span');
-          label.textContent = `${feature.properties.name} · ${feature.properties.riskLevel}`;
-          polygon.bindTooltip(label);
-          polygon.on('click', () => onZonePress(feature.properties.id));
-        });
 
         if (userLocation) {
           L.circleMarker([userLocation.latitude, userLocation.longitude], {
@@ -115,13 +107,21 @@ export function ZoneMap({ features, focusBounds, onZonePress, mapStyle, userLoca
       map?.remove();
       mapRef.current = null;
     };
-  }, [features, mapStyle, onZonePress, theme, userLocation, zoomControlTop, onLoad, onError, onMapPress, onCameraChange]);
-
+}, [
+  mapStyle,
+  theme,
+  userLocation,
+  zoomControlTop,
+  onLoad,
+  onError,
+  onMapPress,
+  onCameraChange,
+]);
   return (
     <div style={{ flex: 1, minHeight: 240, position: 'relative', display: 'flex' }}>
       <div
         ref={containerRef}
-        aria-label="Mapa de zonas de ejemplo"
+        aria-label="Mapa de montaña"
         style={{ flex: 1, minHeight: 240, zIndex: 0 }}
       />
       {error && (

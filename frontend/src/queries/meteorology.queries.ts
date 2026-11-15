@@ -6,11 +6,11 @@ import { queryKeys } from '../api/queryKeys';
 import { getCurrentMeteorology } from '../services/meteorology.service';
 
 import type {
-  MeteorologyByZoneParams,
+  MeteorologyByLocationParams,
 } from '../types/meteorology';
 
 export const useCurrentMeteorology = (
-  params: MeteorologyByZoneParams | null
+  params: MeteorologyByLocationParams | null
 ) => {
   return useQuery({
     queryKey: queryKeys.meteorology.current(

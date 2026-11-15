@@ -11,7 +11,7 @@ export function LocationControl({ onLocate, locating, zoomControlTop }: Pick<Map
       accessibilityRole="button"
       disabled={locating}
       onPress={onLocate}
-      style={[styles.button, { top: zoomControlTop + 108, backgroundColor: theme.colors.surface }]}
+      style={[styles.button, { top: (zoomControlTop ?? 0) + 108, backgroundColor: theme.colors.surface }]}
     >
       {locating ? <ActivityIndicator color={theme.colors.primary} /> : <Text style={{ color: theme.colors.textPrimary, fontSize: 24 }}>⌖</Text>}
     </Pressable>

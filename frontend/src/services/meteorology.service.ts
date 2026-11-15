@@ -2,12 +2,12 @@
 import { api } from '../api/client';
 
 import type {
-  MeteorologyByZoneParams,
+  MeteorologyByLocationParams,
   MeteorologyResponse,
 } from '../types/meteorology';
 
 export const getCurrentMeteorology = async (
-  params: MeteorologyByZoneParams
+  params: MeteorologyByLocationParams
 ): Promise<MeteorologyResponse> => {
   const response = await api.get<MeteorologyResponse>(
     '/datos-meteorologicos/actual/',

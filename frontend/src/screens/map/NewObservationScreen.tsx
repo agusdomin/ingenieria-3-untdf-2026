@@ -6,7 +6,6 @@ import { AppImagePicker, AppSelect, AppTextArea } from "../../components/forms";
 import { AppBottomSheet } from "../../components/dialogs/AppBottomSheet";
 import { WizardHeader } from "../../components/navigation/WizardHeader";
 import { MapContainer } from "../../components/map/MapContainer";
-import { zonesGeoJSON } from "../../mocks/zones.mock";
 import { useTheme } from "../../theme/useTheme";
 import { useRouter } from "expo-router";
 import { ConfirmationView } from "../../components/feedback/ConfirmationView";
@@ -57,9 +56,7 @@ export function NewObservationScreen() {
     setCoordinate(coordinates);
   }, []);
 
-  const handleZonePress = useCallback((_zoneId: string) => {
-    // La selección de zonas no forma parte de este formulario.
-  }, []);
+
 
   const handleBack = () => {
     if (currentStep > 1) {
@@ -209,9 +206,7 @@ export function NewObservationScreen() {
 
               <View style={styles.mapContainer}>
                 <MapContainer
-                  features={zonesGeoJSON.features}
                   mapStyle="terrain"
-                  onZonePress={handleZonePress}
                   userLocation={null}
                   zoomControlTop={16}
                   onMapPress={handleMapPress}
