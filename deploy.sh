@@ -36,10 +36,12 @@ echo "[3/6] Actualizando contenedores..."
 sudo docker compose config --quiet
 sudo docker compose up -d --build
 
-# 5. Aplicar migraciones
-echo "[4/6] Aplicando migraciones..."
+# 5. Aplicar migraciones y publicar archivos estáticos
+echo "[4/6] Aplicando migraciones y recolectando estáticos..."
 sudo docker compose exec -T backend \
     python manage.py migrate --noinput
+sudo docker compose exec -T backend \
+    python manage.py collectstatic --noinput
 
 # 6. Verificar servicios
 echo "[5/6] Estado de Docker..."
@@ -53,8 +55,12 @@ FRONTEND_STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
 BACKEND_STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
     http://127.0.0.1:8080/api/usuarios/)
 
+STATIC_STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+    http://127.0.0.1:8080/static/admin/css/base.css)
+
 echo "Frontend: HTTP ${FRONTEND_STATUS}"
 echo "Backend:  HTTP ${BACKEND_STATUS}"
+echo "Static:   HTTP ${STATIC_STATUS}"
 
 if [[ "$FRONTEND_STATUS" != "200" ]]; then
     echo "ERROR: Frontend no responde con HTTP 200."
@@ -63,6 +69,11 @@ fi
 
 if [[ "$BACKEND_STATUS" != "401" ]]; then
     echo "ERROR: Backend no responde con HTTP 401."
+    exit 1
+fi
+
+if [[ "$STATIC_STATUS" != "200" ]]; then
+    echo "ERROR: Los archivos estáticos no responden con HTTP 200."
     exit 1
 fi
 

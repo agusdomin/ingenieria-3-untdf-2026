@@ -6,6 +6,7 @@ from ..models import Observacion
 class observacionSerializer(serializers.ModelSerializer):
     usuario_nombre = serializers.ReadOnlyField(source='usuario.username')
     fecha_hora = serializers.DateTimeField(required=False)
+    imagen = serializers.ImageField(required=False, allow_null=True, use_url=True)
 
     class Meta:
         model = Observacion
@@ -17,6 +18,7 @@ class observacionSerializer(serializers.ModelSerializer):
             'titulo',
             'descripcion',
             'foto_url',
+            'imagen',
             'fecha_hora',
             'tipo',
             'nivel_relevancia',
