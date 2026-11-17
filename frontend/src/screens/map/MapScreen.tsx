@@ -23,9 +23,9 @@ import { MapAccountModal } from "../../components/auth/MapAccountModal";
 import { MapContainer } from "../../components/map/MapContainer";
 import { MapLayersSheet } from "../../components/map/MapLayersSheet";
 import { MoreOptionsButton } from "../../components/navigation/MoreOptionsButton";
-import { AppBottomSheet } from "../../components/ui/AppBottomSheet";
 
 import { useLocation } from "../../hooks/useLocation";
+import { AppBottomSheet } from "../../components/ui/AppBottomSheet";
 import { useCurrentMeteorology } from "../../queries/meteorology.queries";
 import { useTrafficByArea } from "../../queries/outings.queries";
 import { useTheme } from "../../theme/useTheme";
@@ -35,7 +35,6 @@ type SelectedArea = {
   longitude: number;
   radius: number;
 };
-
 export function MapScreen() {
   const { theme } = useTheme();
   const router = useRouter();
@@ -58,13 +57,9 @@ export function MapScreen() {
     isFallback,
     retry,
   } = useLocation();
-
   const [selectedArea, setSelectedArea] =
-    useState<SelectedArea | null>(null);
-
-  const [locationNoticeDismissed, setLocationNoticeDismissed] =
-    useState(false);
-
+  useState<SelectedArea | null>(null);
+  const [locationNoticeDismissed, setLocationNoticeDismissed] = useState(false);
   const [mapResetVersion, setMapResetVersion] = useState(0);
   const [bottomControlsHeight, setBottomControlsHeight] = useState(54);
 
@@ -904,7 +899,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   bottomOverlay: {
     position: "absolute",
     zIndex: 3,
@@ -1026,7 +1020,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 22,
   },
-
+  zoneWeatherUpdated: {
+  fontSize: 11,
+  marginTop: 4,
+},
   noticeCard: {
     width: "100%",
     maxWidth: 390,

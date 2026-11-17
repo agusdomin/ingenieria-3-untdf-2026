@@ -193,6 +193,8 @@ export function BaseMap({
           );
         }
 
+
+
         currentMap.on('click', (event) => {
           onMapPress?.([
             event.latlng.lng,
