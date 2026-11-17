@@ -30,9 +30,9 @@ def _extraer_puntos(data: Any) -> List[Tuple[float, float]]:
     puntos: List[Tuple[float, float]] = []
 
     if isinstance(data, dict):
-        # 1. Caso estándar: {"lat": ..., "lng": ...} o {"latitude": ..., "longitude": ...}
-        lat = data.get('lat') if 'lat' in data else data.get('latitude')
-        lon = data.get('lng') if 'lng' in data else data.get('lon', data.get('longitude'))
+        # 1. Caso estándar: {"lat": ..., "lng": ...}, {"latitude": ..., "longitude": ...} o {"latitud": ..., "longitud": ...}
+        lat = data.get('lat') or data.get('latitude') or data.get('latitud')
+        lon = data.get('lng') or data.get('lon') or data.get('longitude') or data.get('longitud')
 
         if lat is not None and lon is not None:
             try:
