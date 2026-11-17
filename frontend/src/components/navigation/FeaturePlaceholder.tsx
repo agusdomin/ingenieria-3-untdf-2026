@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import type { SymbolViewProps } from 'expo-symbols';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MoreOptionsButton } from './MoreOptionsButton';
 
 import { useTheme } from '../../theme/useTheme';
 
@@ -19,6 +20,9 @@ export function FeaturePlaceholder({ icon, eyebrow, title, description }: Featur
 
   return (
     <SafeAreaView edges={['top']} style={[styles.screen, { backgroundColor: theme.colors.background }]}>
+      <View style={styles.optionsButton}>
+        <MoreOptionsButton />
+      </View>
       <View style={styles.content}>
         <View style={[styles.iconTile, { backgroundColor: theme.colors.primarySoft }]}>
           <SymbolView name={icon} tintColor={theme.colors.primary} size={29} />
@@ -55,4 +59,5 @@ const styles = StyleSheet.create({
   noteText: { fontSize: 12, fontWeight: '600' },
   action: { minHeight: 48, paddingHorizontal: 18, borderRadius: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 24 },
   actionText: { fontSize: 14, fontWeight: '700' },
+  optionsButton: { position: 'absolute', top: 12, right: 16, zIndex: 10,},
 });

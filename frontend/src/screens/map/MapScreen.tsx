@@ -18,7 +18,6 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { AppBottomSheet } from "../../components/dialogs/AppBottomSheet";
-import { MapAccountModal } from "../../components/auth/MapAccountModal";
 import { useTrafficByArea } from "../../queries/outings.queries";
 import { zonesGeoJSON } from "../../mocks/zones.mock";
 import { useTheme } from "../../theme/useTheme";
@@ -27,6 +26,7 @@ import { MapLayersSheet } from "../../components/map/MapLayersSheet";
 import { useLocation } from "../../hooks/useLocation";
 import { getZoneColor, getZoneCenter, type ZoneFeature } from "./zoneMap.types";
 import { useCurrentMeteorology } from "../../queries/meteorology.queries";
+import { MoreOptionsButton } from "../../components/navigation/MoreOptionsButton";
 
 export function MapScreen() {
   const { theme } = useTheme();
@@ -38,7 +38,6 @@ export function MapScreen() {
     useState<[number, number, number, number]>();
   const [mapStyle, setMapStyle] = useState<"street" | "terrain">("terrain");
   const [showLayers, setShowLayers] = useState(false);
-  const [showAccount, setShowAccount] = useState(false);
   const {
     latitude,
     longitude,
@@ -256,7 +255,6 @@ export function MapScreen() {
             </ScrollView>
           )}
         </View>
-
         <Pressable
           accessibilityLabel="Aviso de seguridad"
           accessibilityRole="button"
@@ -276,20 +274,11 @@ export function MapScreen() {
             size={23}
           />
         </Pressable>
+        <MoreOptionsButton/>
       </SafeAreaView>
 
 
       <View style={[styles.mapControls, { bottom: zoomControlBottom + 114 }]}>
-        <MapControl
-          label="Mi cuenta"
-          icon={{ ios: "person.crop.circle", android: "account_circle", web: "account_circle" }}
-          active={showAccount}
-          onPress={() => {
-            Keyboard.dismiss();
-            setSearchOpen(false);
-            setShowAccount(true);
-          }}
-        />
         <MapControl
           label="Capas del mapa"
           icon={{ ios: "square.3.layers.3d", android: "layers", web: "layers" }}
@@ -419,7 +408,6 @@ export function MapScreen() {
         mapStyle={mapStyle}
         onMapStyleChange={setMapStyle}
       />
-      {showAccount ? <MapAccountModal onDismiss={() => setShowAccount(false)} /> : null}
       <Modal
         animationType="fade"
         transparent

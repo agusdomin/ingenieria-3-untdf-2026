@@ -94,6 +94,7 @@ export default function TabsLayout() {
           name="offline"
           options={{
             title: 'Offline',
+            href: null,
             tabBarIcon: ({ color }) => (
               <SymbolView
                 name={{ ios: 'arrow.triangle.2.circlepath', android: 'sync', web: 'sync' }}

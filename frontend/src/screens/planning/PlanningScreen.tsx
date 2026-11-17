@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SymbolView, type SymbolViewProps } from "expo-symbols";
 import { DateRangePicker, AppTimePicker } from "../../components/forms";
-
+import { MoreOptionsButton } from "../../components/navigation/MoreOptionsButton";
 import { useCreateOuting } from "../../queries/outings.queries";
 import { useTheme } from "../../theme/useTheme";
 
@@ -117,7 +117,8 @@ setCoordinates(null);
       edges={["top"]}
       style={[styles.screen, { backgroundColor: theme.colors.background }]}
     >
-      <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+    <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+      <View style={styles.headerTitle}>
         <SymbolView
           name={{
             ios: "point.topleft.down.to.point.bottomright.curvepath",
@@ -131,6 +132,9 @@ setCoordinates(null);
           Planificar salida
         </Text>
       </View>
+
+    <MoreOptionsButton />
+  </View>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={[styles.card, surface]}>
           <Text style={[styles.sectionTitle, primaryText]}>
@@ -634,10 +638,16 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     gap: 10,
     paddingHorizontal: 20,
     paddingVertical: 20,
     borderBottomWidth: 1,
+  },
+  headerTitle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   title: { fontSize: 20, fontWeight: "700" },
   content: {
