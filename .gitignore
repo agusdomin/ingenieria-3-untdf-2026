@@ -36,3 +36,6 @@ staticfiles/
 # Archivos del sistema operativo
 .DS_Store
 Thumbs.db
+
+# Archivos locales de Expo
+.expo/
