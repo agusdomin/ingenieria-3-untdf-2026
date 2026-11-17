@@ -8,7 +8,7 @@ import {
 export const getReports =
   async (): Promise<Report[]> => {
     const response =
-      await api.get('/reportes-tecnicos');
+      await api.get('/reportes-tecnicos/');
 
     return response.data;
   };
@@ -19,7 +19,7 @@ export const getReport =
   ): Promise<Report> => {
     const response =
       await api.get(
-        `/reportes-tecnicos/${id}`
+        `/reportes-tecnicos/${id}/`
       );
 
     return response.data;
@@ -31,7 +31,7 @@ export const createReport =
   ): Promise<Report> => {
     const response =
       await api.post(
-        '/reportes-tecnicos',
+        '/reportes-tecnicos/',
         data
       );
 

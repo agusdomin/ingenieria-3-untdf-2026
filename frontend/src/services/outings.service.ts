@@ -9,7 +9,7 @@ import { api } from '../api/client';
 export const getOutings =
   async (): Promise<Outing[]> => {
     const response =
-      await api.get('/planes-salida');
+      await api.get('/planes-salida/');
 
     return response.data;
   };
@@ -20,7 +20,7 @@ export const createOuting =
   ): Promise<Outing> => {
     const response =
       await api.post(
-        '/planes-salida',
+        '/planes-salida/',
         data
       );
 
