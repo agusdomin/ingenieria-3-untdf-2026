@@ -1,43 +1,55 @@
 import { useCallback, useMemo, useState } from "react";
+
 import {
   ActivityIndicator,
   Keyboard,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
+
 import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import type { SymbolViewProps } from "expo-symbols";
+
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { AppBottomSheet } from "../../components/dialogs/AppBottomSheet";
-import { useTrafficByArea } from "../../queries/outings.queries";
-import { zonesGeoJSON } from "../../mocks/zones.mock";
-import { useTheme } from "../../theme/useTheme";
+
+import { MapAccountModal } from "../../components/auth/MapAccountModal";
 import { MapContainer } from "../../components/map/MapContainer";
 import { MapLayersSheet } from "../../components/map/MapLayersSheet";
-import { useLocation } from "../../hooks/useLocation";
-import { getZoneColor, getZoneCenter, type ZoneFeature } from "./zoneMap.types";
-import { useCurrentMeteorology } from "../../queries/meteorology.queries";
 import { MoreOptionsButton } from "../../components/navigation/MoreOptionsButton";
+import { AppBottomSheet } from "../../components/ui/AppBottomSheet";
+
+import { useLocation } from "../../hooks/useLocation";
+import { useCurrentMeteorology } from "../../queries/meteorology.queries";
+import { useTrafficByArea } from "../../queries/outings.queries";
+import { useTheme } from "../../theme/useTheme";
+
+type SelectedArea = {
+  latitude: number;
+  longitude: number;
+  radius: number;
+};
 
 export function MapScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [search, setSearch] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
+
   const [focusBounds, setFocusBounds] =
     useState<[number, number, number, number]>();
-  const [mapStyle, setMapStyle] = useState<"street" | "terrain">("terrain");
+
+  const [mapStyle, setMapStyle] =
+    useState<"street" | "terrain">("terrain");
+
   const [showLayers, setShowLayers] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
+
   const {
     latitude,
     longitude,
@@ -46,91 +58,95 @@ export function MapScreen() {
     isFallback,
     retry,
   } = useLocation();
-  const [locationNoticeDismissed, setLocationNoticeDismissed] = useState(false);
+
+  const [selectedArea, setSelectedArea] =
+    useState<SelectedArea | null>(null);
+
+  const [locationNoticeDismissed, setLocationNoticeDismissed] =
+    useState(false);
+
   const [mapResetVersion, setMapResetVersion] = useState(0);
   const [bottomControlsHeight, setBottomControlsHeight] = useState(54);
+
   const bottomSpacing = Math.max(12, insets.bottom);
-  const zoomControlBottom = bottomSpacing + bottomControlsHeight + 12;
+  const zoomControlBottom =
+    bottomSpacing + bottomControlsHeight + 12;
+
   const userLocation = useMemo(
     () =>
-      isFallback || latitude === null || longitude === null || locating
+      isFallback ||
+      latitude === null ||
+      longitude === null ||
+      locating
         ? null
         : { latitude, longitude },
     [latitude, longitude, locating, isFallback],
   );
-  const locationMessage = !locating ? error : null;
-  const [showSafetyNotice, setShowSafetyNotice] = useState(false);
-  const [selectedZone, setSelectedZone] = useState<ZoneFeature | null>(null);
 
-  const trafficCoordinates = useMemo(() => {
-    return selectedZone ? getZoneCenter(selectedZone) : null;
-  }, [selectedZone]);
+  const locationMessage = !locating ? error : null;
+
+  const [showSafetyNotice, setShowSafetyNotice] =
+    useState(false);
 
   const trafficQuery = useTrafficByArea(
-    trafficCoordinates
+    selectedArea
       ? {
-          latitude: trafficCoordinates.latitude,
-          longitude: trafficCoordinates.longitude,
-          radiusKm: 5,
+          latitude: selectedArea.latitude,
+          longitude: selectedArea.longitude,
+          radiusKm: selectedArea.radius / 1000,
         }
       : null,
   );
 
   const meteorologyQuery = useCurrentMeteorology(
-    trafficCoordinates
+    selectedArea
       ? {
-          latitude: trafficCoordinates.latitude,
-          longitude: trafficCoordinates.longitude,
+          latitude: selectedArea.latitude,
+          longitude: selectedArea.longitude,
         }
       : null,
   );
 
-  const features = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase();
-    return zonesGeoJSON.features.filter((feature) =>
-      feature.properties.name.toLocaleLowerCase().includes(query),
-    );
-  }, [search]);
+  const handleMapPress = useCallback(
+    (coordinate: [number, number]) => {
+      const [longitude, latitude] = coordinate;
 
-  function selectSearchResult(feature: ZoneFeature) {
-    const coordinates = feature.geometry.coordinates.flat();
-    const longitudes = coordinates.map(([longitude]) => longitude);
-    const latitudes = coordinates.map(([, latitude]) => latitude);
-    setFocusBounds([
-      Math.min(...longitudes),
-      Math.min(...latitudes),
-      Math.max(...longitudes),
-      Math.max(...latitudes),
-    ]);
-    setSearch(feature.properties.name);
-    setSearchOpen(false);
-    Keyboard.dismiss();
-  }
+      Keyboard.dismiss();
 
-  const handleZonePress = useCallback((zonaId: string) => {
-    Keyboard.dismiss();
-
-    const zone = zonesGeoJSON.features.find((feature) => feature.properties.id === zonaId);
-    if (zone) setSelectedZone(zone);
-  }, []);
+      setSelectedArea({
+        latitude,
+        longitude,
+        radius: 500,
+      });
+    },
+    [],
+  );
 
   const locateMe = useCallback(async () => {
     setLocationNoticeDismissed(false);
     setFocusBounds(undefined);
+
     await retry();
-    // Reiniciar la cámara también cuando no hay una posición real que la recentre.
+
+    // Reiniciar la cámara también cuando no hay
+    // una posición real que la recentre.
     setMapResetVersion((version) => version + 1);
   }, [retry]);
 
   return (
-    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
+    <View
+      style={[
+        styles.screen,
+        { backgroundColor: theme.colors.background },
+      ]}
+    >
       <View style={StyleSheet.absoluteFill}>
         <MapContainer
           key={mapResetVersion}
           focusBounds={focusBounds}
           mapStyle={mapStyle}
           showRiskZones={false}
-          onZonePress={handleZonePress}
+          onMapPress={handleMapPress}
           userLocation={userLocation}
           zoomControlTop={insets.top + 64}
           zoomControlBottom={zoomControlBottom}
@@ -142,119 +158,6 @@ export function MapScreen() {
         pointerEvents="box-none"
         style={styles.overlay}
       >
-        <View
-          style={[
-            styles.topPanel,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-            },
-          ]}
-        >
-          <View style={styles.searchRow}>
-            <SymbolView
-              name={{
-                ios: "magnifyingglass",
-                android: "search",
-                web: "search",
-              }}
-              tintColor={theme.colors.textMuted}
-              size={20}
-            />
-            <TextInput
-              accessibilityLabel="Buscar zona"
-              value={search}
-              onChangeText={(value) => {
-                setSearch(value);
-                setSearchOpen(true);
-              }}
-              onFocus={() => setSearchOpen(true)}
-              onSubmitEditing={() => {
-                if (features.length === 1) selectSearchResult(features[0]);
-              }}
-              placeholder="Buscar zona"
-              placeholderTextColor={theme.colors.inputPlaceholder}
-              returnKeyType="search"
-              style={[styles.searchInput, { color: theme.colors.textPrimary }]}
-            />
-            {search.length > 0 && (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Borrar búsqueda"
-                hitSlop={8}
-                onPress={() => {
-                  setSearch("");
-                  setSearchOpen(false);
-                }}
-              >
-                <Text style={{ color: theme.colors.textPrimary, fontSize: 24 }}>
-                  ×
-                </Text>
-              </Pressable>
-            )}
-          </View>
-          {searchOpen && search.trim().length > 0 && (
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              style={{ maxHeight: 200 }}
-            >
-              {features.length === 0 ? (
-                <Text
-                  accessibilityLiveRegion="polite"
-                  style={{
-                    color: theme.colors.textSecondary,
-                    paddingVertical: 12,
-                  }}
-                >
-                  No se encontraron zonas
-                </Text>
-              ) : (
-                features.map((feature) => (
-                  <Pressable
-                    key={feature.properties.id}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Centrar ${feature.properties.name}`}
-                    onPress={() => selectSearchResult(feature)}
-                    style={{ paddingVertical: 12, minHeight: 48 }}
-                  >
-                    <Text
-                      style={{
-                        color: theme.colors.textPrimary,
-                        fontWeight: "600",
-                      }}
-                    >
-                      {feature.properties.name}
-                    </Text>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <View
-                        style={[
-                          styles.statusDot,
-                          {
-                            backgroundColor: getZoneColor(feature.properties.riskLevel, theme),
-                          },
-                        ]}
-                      />
-                      <Text
-                        style={{
-                          color: theme.colors.textSecondary,
-                          textTransform: "capitalize",
-                        }}
-                      >
-                        Riesgo {feature.properties.riskLevel}
-                      </Text>
-                    </View>
-                  </Pressable>
-                ))
-              )}
-            </ScrollView>
-          )}
-        </View>
         <Pressable
           accessibilityLabel="Aviso de seguridad"
           accessibilityRole="button"
@@ -274,21 +177,44 @@ export function MapScreen() {
             size={23}
           />
         </Pressable>
-        <MoreOptionsButton/>
+
+        <MoreOptionsButton />
       </SafeAreaView>
 
+      <View
+        style={[
+          styles.mapControls,
+          { bottom: zoomControlBottom + 114 },
+        ]}
+      >
+        <MapControl
+          label="Mi cuenta"
+          icon={{
+            ios: "person.crop.circle",
+            android: "account_circle",
+            web: "account_circle",
+          }}
+          active={showAccount}
+          onPress={() => {
+            Keyboard.dismiss();
+            setShowAccount(true);
+          }}
+        />
 
-      <View style={[styles.mapControls, { bottom: zoomControlBottom + 114 }]}>
         <MapControl
           label="Capas del mapa"
-          icon={{ ios: "square.3.layers.3d", android: "layers", web: "layers" }}
+          icon={{
+            ios: "square.3.layers.3d",
+            android: "layers",
+            web: "layers",
+          }}
           active={showLayers}
           onPress={() => {
             Keyboard.dismiss();
-            setSearchOpen(false);
             setShowLayers(true);
           }}
         />
+
         <Pressable
           accessibilityLabel="Mostrar mi ubicación"
           accessibilityRole="button"
@@ -304,7 +230,10 @@ export function MapScreen() {
           ]}
         >
           {locating ? (
-            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <ActivityIndicator
+              size="small"
+              color={theme.colors.primary}
+            />
           ) : (
             <SymbolView
               name={{
@@ -313,7 +242,9 @@ export function MapScreen() {
                 web: "my_location",
               }}
               tintColor={
-                userLocation ? theme.colors.primary : theme.colors.textPrimary
+                userLocation
+                  ? theme.colors.primary
+                  : theme.colors.textPrimary
               }
               size={21}
             />
@@ -341,10 +272,13 @@ export function MapScreen() {
           >
             {locationMessage}
           </Text>
+
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Cerrar aviso"
-            onPress={() => setLocationNoticeDismissed(true)}
+            onPress={() =>
+              setLocationNoticeDismissed(true)
+            }
             style={({ pressed }) => [
               styles.locationNoticeClose,
               {
@@ -355,7 +289,11 @@ export function MapScreen() {
             ]}
           >
             <SymbolView
-              name={{ ios: "xmark", android: "close", web: "close" }}
+              name={{
+                ios: "xmark",
+                android: "close",
+                web: "close",
+              }}
               size={16.5}
               tintColor={theme.colors.primary}
             />
@@ -366,7 +304,9 @@ export function MapScreen() {
       <View
         pointerEvents="box-none"
         onLayout={(event) =>
-          setBottomControlsHeight(event.nativeEvent.layout.height)
+          setBottomControlsHeight(
+            event.nativeEvent.layout.height,
+          )
         }
         style={[
           styles.bottomOverlay,
@@ -374,11 +314,14 @@ export function MapScreen() {
         ]}
       >
         <View />
+
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Crear reporte"
           onPress={() =>
-            router.push("/(tabs)/mapa/observacion/cargar-observacion" as never)
+            router.push(
+              "/(tabs)/mapa/observacion/cargar-observacion" as never,
+            )
           }
           style={({ pressed }) => [
             styles.reportButton,
@@ -387,10 +330,15 @@ export function MapScreen() {
           ]}
         >
           <SymbolView
-            name={{ ios: "plus", android: "add", web: "add" }}
+            name={{
+              ios: "plus",
+              android: "add",
+              web: "add",
+            }}
             tintColor={theme.colors.textInverse}
             size={22}
           />
+
           <Text
             style={[
               styles.reportButtonText,
@@ -402,29 +350,287 @@ export function MapScreen() {
         </Pressable>
       </View>
 
+      <AppBottomSheet
+        visible={selectedArea !== null}
+        onClose={() => setSelectedArea(null)}
+        title="Área seleccionada"
+      >
+        {selectedArea && (
+          <View style={styles.areaDetails}>
+            <View
+              style={[
+                styles.infoCard,
+                {
+                  backgroundColor:
+                    theme.colors.surfaceSecondary,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
+                Personas en salidas registradas
+              </Text>
+
+              {trafficQuery.isLoading && (
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.colors.primary}
+                  />
+
+                  <Text
+                    style={[
+                      styles.description,
+                      {
+                        color:
+                          theme.colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    Consultando tránsito...
+                  </Text>
+                </View>
+              )}
+
+              {trafficQuery.isError && (
+                <Text
+                  style={[
+                    styles.description,
+                    { color: theme.colors.danger },
+                  ]}
+                >
+                  No se pudo obtener la información de
+                  tránsito.
+                </Text>
+              )}
+
+              {trafficQuery.isSuccess && (
+                <>
+                  <Text
+                    style={[
+                      styles.trafficValue,
+                      {
+                        color:
+                          theme.colors.textPrimary,
+                      },
+                    ]}
+                  >
+                    {trafficQuery.data.total_personas}
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.description,
+                      {
+                        color:
+                          theme.colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    Personas asociadas a salidas en curso
+                    dentro de un radio de{" "}
+                    {trafficQuery.data.radio_km} km.
+                  </Text>
+                </>
+              )}
+            </View>
+
+            <View
+              style={[
+                styles.infoCard,
+                {
+                  backgroundColor:
+                    theme.colors.surfaceSecondary,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
+                Condiciones meteorológicas
+              </Text>
+
+              {meteorologyQuery.isLoading && (
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.colors.primary}
+                  />
+
+                  <Text
+                    style={[
+                      styles.description,
+                      {
+                        color:
+                          theme.colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    Consultando condiciones
+                    meteorológicas...
+                  </Text>
+                </View>
+              )}
+
+              {meteorologyQuery.isError && (
+                <Text
+                  style={[
+                    styles.description,
+                    { color: theme.colors.danger },
+                  ]}
+                >
+                  No se pudo obtener la información
+                  meteorológica.
+                </Text>
+              )}
+
+              {meteorologyQuery.isSuccess && (
+                <>
+                  <View style={styles.weatherMain}>
+                    <Text
+                      style={[
+                        styles.weatherTemperature,
+                        {
+                          color:
+                            theme.colors.textPrimary,
+                        },
+                      ]}
+                    >
+                      {meteorologyQuery.data.temperatura !=
+                      null
+                        ? `${meteorologyQuery.data.temperatura} °C`
+                        : "—"}
+                    </Text>
+
+                    <Text
+                      style={[
+                        styles.weatherDescription,
+                        {
+                          color:
+                            theme.colors.textSecondary,
+                        },
+                      ]}
+                    >
+                      Temperatura actual
+                    </Text>
+                  </View>
+
+                  <View style={styles.weatherGrid}>
+                    <WeatherItem
+                      label="Viento"
+                      value={`${
+                        meteorologyQuery.data
+                          .velocidad_viento ?? "—"
+                      } km/h`}
+                      detail={
+                        meteorologyQuery.data
+                          .direccion_viento ?? "Sin datos"
+                      }
+                    />
+
+                    <WeatherItem
+                      label="Ráfagas"
+                      value={`${
+                        meteorologyQuery.data.rafaga ?? "—"
+                      } km/h`}
+                    />
+
+                    <WeatherItem
+                      label="Precipitaciones"
+                      value={`${
+                        meteorologyQuery.data
+                          .precipitaciones ?? "—"
+                      } mm`}
+                    />
+
+                    <WeatherItem
+                      label="Humedad"
+                      value={`${
+                        meteorologyQuery.data.humedad ?? "—"
+                      } %`}
+                    />
+
+                    <WeatherItem
+                      label="Nieve fresca"
+                      value={`${
+                        meteorologyQuery.data
+                          .nieve_fresca ?? "—"
+                      } cm`}
+                    />
+
+                    <WeatherItem
+                      label="Espesor de nieve"
+                      value={`${
+                        meteorologyQuery.data
+                          .espesor_nieve ?? "—"
+                      } cm`}
+                    />
+                  </View>
+
+                  <Text
+                    style={[
+                      styles.weatherUpdated,
+                      {
+                        color:
+                          theme.colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    Actualizado:{" "}
+                    {new Date(
+                      meteorologyQuery.data.fecha_hora,
+                    ).toLocaleString("es-AR")}
+                  </Text>
+                </>
+              )}
+            </View>
+          </View>
+        )}
+      </AppBottomSheet>
+
       <MapLayersSheet
         visible={showLayers}
         onClose={() => setShowLayers(false)}
         mapStyle={mapStyle}
         onMapStyleChange={setMapStyle}
       />
+
+      {showAccount ? (
+        <MapAccountModal
+          onDismiss={() => setShowAccount(false)}
+        />
+      ) : null}
+
       <Modal
         animationType="fade"
         transparent
         visible={showSafetyNotice}
-        onRequestClose={() => setShowSafetyNotice(false)}
+        onRequestClose={() =>
+          setShowSafetyNotice(false)
+        }
       >
         <View
           style={[
             styles.noticeBackdrop,
-            { backgroundColor: theme.colors.overlay },
+            {
+              backgroundColor:
+                theme.colors.overlay,
+            },
           ]}
         >
           <View
             style={[
               styles.noticeCard,
               {
-                backgroundColor: theme.colors.surface,
+                backgroundColor:
+                  theme.colors.surface,
                 borderColor: theme.colors.border,
               },
             ]}
@@ -432,7 +638,9 @@ export function MapScreen() {
             <View
               style={[
                 styles.noticeIcon,
-                { backgroundColor: `${theme.colors.danger}22` },
+                {
+                  backgroundColor: `${theme.colors.danger}22`,
+                },
               ]}
             >
               <SymbolView
@@ -445,30 +653,51 @@ export function MapScreen() {
                 size={25}
               />
             </View>
+
             <Text
-              style={[styles.noticeTitle, { color: theme.colors.textPrimary }]}
+              style={[
+                styles.noticeTitle,
+                { color: theme.colors.textPrimary },
+              ]}
             >
               Antes de salir
             </Text>
+
             <Text
-              style={[styles.noticeBody, { color: theme.colors.textSecondary }]}
+              style={[
+                styles.noticeBody,
+                {
+                  color:
+                    theme.colors.textSecondary,
+                },
+              ]}
             >
-              Este mapa contiene zonas y niveles de peligro ilustrativos. No es
-              un pronóstico oficial ni debe usarse para tomar decisiones en
-              terreno.
+              La información mostrada en el mapa es
+              orientativa. Consultá los reportes y
+              boletines disponibles antes de tomar
+              decisiones en terreno.
             </Text>
+
             <Pressable
               accessibilityRole="button"
-              onPress={() => setShowSafetyNotice(false)}
+              onPress={() =>
+                setShowSafetyNotice(false)
+              }
               style={[
                 styles.noticeAction,
-                { backgroundColor: theme.colors.primary },
+                {
+                  backgroundColor:
+                    theme.colors.primary,
+                },
               ]}
             >
               <Text
                 style={[
                   styles.noticeActionText,
-                  { color: theme.colors.textInverse },
+                  {
+                    color:
+                      theme.colors.textInverse,
+                  },
                 ]}
               >
                 Entendido
@@ -477,212 +706,6 @@ export function MapScreen() {
           </View>
         </View>
       </Modal>
-      {/* Panel inferior con información de la zona */}
-
-      {/* Panel inferior con información de la zona */}
-      <AppBottomSheet
-        visible={selectedZone !== null}
-        onClose={() => setSelectedZone(null)}
-        title={selectedZone?.properties.name ?? "Información de la zona"}
-      >
-        {selectedZone && (
-          <View style={styles.zoneDetails}>
-            {/* Nivel de riesgo */}
-            <View style={styles.zoneRiskContainer}>
-              <Text
-                style={[
-                  styles.zoneLabel,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                Nivel de riesgo
-              </Text>
-
-              <View
-                style={[
-                  styles.zoneRiskBadge,
-                  {
-                    backgroundColor: getZoneColor(selectedZone.properties.riskLevel, theme),
-                  },
-                ]}
-              >
-                <Text style={styles.zoneRiskText}>
-                  {selectedZone.properties.riskLevel.toUpperCase()}
-                </Text>
-              </View>
-
-              <Text
-                style={[
-                  styles.zoneDescription,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                Información ilustrativa de esta zona. Los niveles de riesgo
-                mostrados corresponden a datos de ejemplo y no representan un
-                pronóstico oficial.
-              </Text>
-            </View>
-
-            {/* Tránsito de personas */}
-            <View style={styles.zoneTrafficContainer}>
-              <Text
-                style={[
-                  styles.zoneLabel,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                Personas en salidas registradas
-              </Text>
-
-              {trafficQuery.isLoading && (
-                <View style={styles.zoneTrafficLoading}>
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.primary}
-                  />
-                  <Text
-                    style={[
-                      styles.zoneTrafficDescription,
-                      { color: theme.colors.textSecondary },
-                    ]}
-                  >
-                    Consultando tránsito...
-                  </Text>
-                </View>
-              )}
-
-              {trafficQuery.isError && (
-                <Text
-                  style={[
-                    styles.zoneTrafficDescription,
-                    { color: theme.colors.danger },
-                  ]}
-                >
-                  No se pudo obtener la información de tránsito.
-                </Text>
-              )}
-
-              {trafficQuery.isSuccess && (
-                <>
-                  <Text
-                    style={[
-                      styles.zoneTrafficValue,
-                      { color: theme.colors.textPrimary },
-                    ]}
-                  >
-                    {trafficQuery.data.total_personas}
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.zoneTrafficDescription,
-                      { color: theme.colors.textSecondary },
-                    ]}
-                  >
-                    Personas asociadas a salidas en curso dentro de un radio de{" "}
-                    {trafficQuery.data.radio_km} km.
-                  </Text>
-                </>
-              )}
-            </View>
-
-            {/* Información meteorológica */}
-            <View style={styles.zoneWeatherContainer}>
-              <Text style={styles.zoneWeatherTitle}>
-                Condiciones meteorológicas
-              </Text>
-
-              {meteorologyQuery.isLoading && (
-                <View style={styles.zoneTrafficLoading}>
-                  <ActivityIndicator size="small" />
-                  <Text>Consultando condiciones meteorológicas...</Text>
-                </View>
-              )}
-
-              {meteorologyQuery.isError && (
-                <Text style={styles.zoneWeatherError}>
-                  No se pudo obtener la información meteorológica. Intentá
-                  nuevamente más tarde.
-                </Text>
-              )}
-              {/* DATOS METEREOLOGICOS DE LA ZONA */}
-              {meteorologyQuery.isSuccess && (
-                <>
-                  <View style={styles.zoneWeatherMain}>
-                    <Text style={styles.zoneWeatherTemperature}>
-                      {meteorologyQuery.data.temperatura != null
-                        ? `${meteorologyQuery.data.temperatura} °C`
-                        : "—"}
-                    </Text>
-
-                    <Text style={styles.zoneWeatherDescription}>
-                      Temperatura actual
-                    </Text>
-                  </View>
-
-                  <View style={styles.zoneWeatherGrid}>
-                    <View style={styles.zoneWeatherItem}>
-                      <Text style={styles.zoneWeatherLabel}>Viento</Text>
-                      <Text style={styles.zoneWeatherValue}>
-                        {meteorologyQuery.data.velocidad_viento ?? "—"} km/h
-                      </Text>
-                      <Text style={styles.zoneWeatherDetail}>
-                        {meteorologyQuery.data.direccion_viento ?? "Sin datos"}
-                      </Text>
-                    </View>
-
-                    <View style={styles.zoneWeatherItem}>
-                      <Text style={styles.zoneWeatherLabel}>Ráfagas</Text>
-                      <Text style={styles.zoneWeatherValue}>
-                        {meteorologyQuery.data.rafaga ?? "—"} km/h
-                      </Text>
-                    </View>
-
-                    <View style={styles.zoneWeatherItem}>
-                      <Text style={styles.zoneWeatherLabel}>
-                        Precipitaciones
-                      </Text>
-                      <Text style={styles.zoneWeatherValue}>
-                        {meteorologyQuery.data.precipitaciones ?? "—"} mm
-                      </Text>
-                    </View>
-
-                    <View style={styles.zoneWeatherItem}>
-                      <Text style={styles.zoneWeatherLabel}>Humedad</Text>
-                      <Text style={styles.zoneWeatherValue}>
-                        {meteorologyQuery.data.humedad ?? "—"} %
-                      </Text>
-                    </View>
-
-                    <View style={styles.zoneWeatherItem}>
-                      <Text style={styles.zoneWeatherLabel}>Nieve fresca</Text>
-                      <Text style={styles.zoneWeatherValue}>
-                        {meteorologyQuery.data.nieve_fresca ?? "—"} cm
-                      </Text>
-                    </View>
-
-                    <View style={styles.zoneWeatherItem}>
-                      <Text style={styles.zoneWeatherLabel}>
-                        Espesor de nieve
-                      </Text>
-                      <Text style={styles.zoneWeatherValue}>
-                        {meteorologyQuery.data.espesor_nieve ?? "—"} cm
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Text style={styles.zoneWeatherUpdated}>
-                    Actualizado:{" "}
-                    {new Date(meteorologyQuery.data.fecha_hora).toLocaleString(
-                      "es-AR",
-                    )}
-                  </Text>
-                </>
-              )}
-            </View>
-          </View>
-        )}
-      </AppBottomSheet>
     </View>
   );
 }
@@ -694,8 +717,14 @@ interface MapControlProps {
   onPress: () => void;
 }
 
-function MapControl({ label, icon, active, onPress }: MapControlProps) {
+function MapControl({
+  label,
+  icon,
+  active,
+  onPress,
+}: MapControlProps) {
   const { theme } = useTheme();
+
   return (
     <Pressable
       accessibilityLabel={label}
@@ -707,21 +736,85 @@ function MapControl({ label, icon, active, onPress }: MapControlProps) {
           backgroundColor: theme.colors.surface,
           borderColor: theme.colors.border,
         },
-        active && { borderColor: theme.colors.primary },
+        active && {
+          borderColor: theme.colors.primary,
+        },
         pressed && styles.pressed,
       ]}
     >
       <SymbolView
         name={icon}
-        tintColor={active ? theme.colors.primary : theme.colors.textPrimary}
+        tintColor={
+          active
+            ? theme.colors.primary
+            : theme.colors.textPrimary
+        }
         size={21}
       />
     </Pressable>
   );
 }
 
+interface WeatherItemProps {
+  label: string;
+  value: string;
+  detail?: string;
+}
+
+function WeatherItem({
+  label,
+  value,
+  detail,
+}: WeatherItemProps) {
+  const { theme } = useTheme();
+
+  return (
+    <View
+      style={[
+        styles.weatherItem,
+        {
+          backgroundColor: theme.colors.surface,
+        },
+      ]}
+    >
+      <Text
+        style={[
+          styles.weatherLabel,
+          { color: theme.colors.textSecondary },
+        ]}
+      >
+        {label}
+      </Text>
+
+      <Text
+        style={[
+          styles.weatherValue,
+          { color: theme.colors.textPrimary },
+        ]}
+      >
+        {value}
+      </Text>
+
+      {detail ? (
+        <Text
+          style={[
+            styles.weatherDetail,
+            { color: theme.colors.textSecondary },
+          ]}
+        >
+          {detail}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  screen: { flex: 1, overflow: "hidden" },
+  screen: {
+    flex: 1,
+    overflow: "hidden",
+  },
+
   overlay: {
     zIndex: 4,
     flexDirection: "row",
@@ -730,33 +823,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 8,
   },
-  topPanel: {
-    flex: 1,
-    minWidth: 0,
-    borderWidth: 1,
-    borderRadius: 22,
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    shadowColor: "#000",
-    shadowOpacity: 0.16,
-    shadowRadius: 15,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 6,
-  },
-  searchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 9,
-    minHeight: 34,
-  },
-  searchInput: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 14,
-    fontWeight: "600",
-    paddingVertical: 4,
-  },
-  statusDot: { width: 7, height: 7, borderRadius: 4 },
+
   safetyButton: {
     width: 46,
     height: 46,
@@ -768,10 +835,20 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.18,
     shadowRadius: 9,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
     elevation: 5,
   },
-  mapControls: { position: "absolute", right: 13, zIndex: 3, gap: 9 },
+
+  mapControls: {
+    position: "absolute",
+    right: 13,
+    zIndex: 3,
+    gap: 9,
+  },
+
   mapControl: {
     width: 44,
     height: 44,
@@ -782,9 +859,13 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.14,
     shadowRadius: 7,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
     elevation: 4,
   },
+
   locationNotice: {
     position: "absolute",
     left: 12,
@@ -801,10 +882,19 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.16,
     shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
     elevation: 4,
   },
-  locationNoticeText: { flex: 1, fontSize: 12, textAlign: "center" },
+
+  locationNoticeText: {
+    flex: 1,
+    fontSize: 12,
+    textAlign: "center",
+  },
+
   locationNoticeClose: {
     width: 33,
     height: 33,
@@ -814,6 +904,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   bottomOverlay: {
     position: "absolute",
     zIndex: 3,
@@ -824,24 +915,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     gap: 8,
   },
-  legend: {
-    maxWidth: "65%",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    borderWidth: 1,
-    borderRadius: 16,
-    gap: 9,
-    paddingHorizontal: 11,
-    paddingVertical: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.14,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
-  },
-  legendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
-  legendDot: { width: 8, height: 8, borderRadius: 4 },
-  legendLabel: { fontSize: 10, fontWeight: "600" },
+
   reportButton: {
     minHeight: 54,
     borderRadius: 27,
@@ -853,17 +927,106 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.18,
     shadowRadius: 11,
-    shadowOffset: { width: 0, height: 5 },
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
     elevation: 6,
   },
-  reportButtonText: { fontSize: 14, fontWeight: "700" },
-  pressed: { opacity: 0.8, transform: [{ scale: 0.97 }] },
+
+  reportButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  areaDetails: {
+    gap: 14,
+  },
+
+  infoCard: {
+    gap: 8,
+    padding: 14,
+    borderRadius: 16,
+  },
+
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+
+  loadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  description: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
+
+  trafficValue: {
+    fontSize: 30,
+    fontWeight: "800",
+  },
+
+  weatherMain: {
+    gap: 2,
+  },
+
+  weatherTemperature: {
+    fontSize: 30,
+    fontWeight: "800",
+  },
+
+  weatherDescription: {
+    fontSize: 12,
+  },
+
+  weatherGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+
+  weatherItem: {
+    width: "47%",
+    padding: 10,
+    borderRadius: 12,
+  },
+
+  weatherLabel: {
+    fontSize: 11,
+  },
+
+  weatherValue: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  weatherDetail: {
+    fontSize: 11,
+  },
+
+  weatherUpdated: {
+    fontSize: 11,
+    marginTop: 4,
+  },
+
+  pressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.97 }],
+  },
+
   noticeBackdrop: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 22,
   },
+
   noticeCard: {
     width: "100%",
     maxWidth: 390,
@@ -872,6 +1035,7 @@ const styles = StyleSheet.create({
     padding: 23,
     gap: 12,
   },
+
   noticeIcon: {
     width: 46,
     height: 46,
@@ -879,8 +1043,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  noticeTitle: { fontSize: 21, fontWeight: "700" },
-  noticeBody: { fontSize: 14, lineHeight: 21 },
+
+  noticeTitle: {
+    fontSize: 21,
+    fontWeight: "700",
+  },
+
+  noticeBody: {
+    fontSize: 14,
+    lineHeight: 21,
+  },
+
   noticeAction: {
     height: 48,
     borderRadius: 14,
@@ -888,120 +1061,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 5,
   },
-  noticeActionText: { fontSize: 14, fontWeight: "700" },
-  zoneDetails: {
-    gap: 12,
-  },
 
-  zoneLabel: {
-    fontSize: 13,
-    fontWeight: "500",
-  },
-
-  zoneRiskBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-
-  zoneRiskText: {
-    color: "#FFFFFF",
-    fontSize: 13,
+  noticeActionText: {
+    fontSize: 14,
     fontWeight: "700",
   },
-
-  zoneDescription: {
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  zoneTrafficContainer: {
-    gap: 8,
-    marginTop: 8,
-  },
-
-  zoneTrafficLoading: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-
-  zoneTrafficValue: {
-    fontSize: 28,
-    fontWeight: "bold",
-  },
-
-  zoneTrafficDescription: {
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  zoneRiskContainer: {
-    gap: 10,
-  },
-
-zoneWeatherContainer: {
-  gap: 12,
-  marginTop: 12,
-  paddingTop: 14,
-  borderTopWidth: 1,
-  borderTopColor: "#D1D5DB",
-},
-
-zoneWeatherTitle: {
-  fontSize: 16,
-  fontWeight: "700",
-},
-
-zoneWeatherMain: {
-  gap: 2,
-},
-
-zoneWeatherTemperature: {
-  fontSize: 30,
-  fontWeight: "bold",
-},
-
-zoneWeatherDescription: {
-  fontSize: 13,
-  color: "#6B7280",
-},
-
-zoneWeatherGrid: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  gap: 12,
-},
-
-zoneWeatherItem: {
-  width: "47%",
-  gap: 3,
-},
-
-zoneWeatherLabel: {
-  fontSize: 12,
-  color: "#6B7280",
-},
-
-zoneWeatherValue: {
-  fontSize: 15,
-  fontWeight: "600",
-},
-
-zoneWeatherDetail: {
-  fontSize: 12,
-  color: "#6B7280",
-},
-
-zoneWeatherUpdated: {
-  fontSize: 11,
-  color: "#6B7280",
-  marginTop: 4,
-},
-
-zoneWeatherError: {
-  fontSize: 13,
-  color: "#B91C1C",
-  lineHeight: 19,
-},
-
 });
