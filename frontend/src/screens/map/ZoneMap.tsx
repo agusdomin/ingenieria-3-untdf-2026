@@ -1,21 +1,53 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { WebView, type WebViewMessageEvent } from 'react-native-webview';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { WebView, type WebViewMessageEvent } from "react-native-webview";
 
-import { useTheme } from '../../theme/useTheme';
-import { EMPTY_ZONES, ignoreZonePress, getZoneColor, getZoneCoordinates } from './zoneMap.types';
-import { INITIAL_CENTER, INITIAL_ZOOM, type MapContainerProps } from '../../components/map/MapContainer.types';
+import { useTheme } from "../../theme/useTheme";
+import {
+  EMPTY_ZONES,
+  ignoreZonePress,
+  getZoneColor,
+  getZoneCoordinates,
+} from "./zoneMap.types";
+import {
+  INITIAL_CENTER,
+  INITIAL_ZOOM,
+  type MapContainerProps,
+} from "../../components/map/MapContainer.types";
 
-type MapState = 'loading' | 'ready' | 'tiles-error' | 'engine-error';
-type MapMessage = { type: 'ready' | 'tiles-ready' | 'tile-error' | 'engine-error' | 'zone-press'; id?: string }
-  | { type: 'map-press'; coordinate: [number, number] }
-  | { type: 'camera-change'; center: [number, number]; zoom: number };
+type MapState = "loading" | "ready" | "tiles-error" | "engine-error";
+type MapMessage =
+  | {
+      type:
+        | "ready"
+        | "tiles-ready"
+        | "tile-error"
+        | "engine-error"
+        | "zone-press";
+      id?: string;
+    }
+  | { type: "map-press"; coordinate: [number, number] }
+  | { type: "camera-change"; center: [number, number]; zoom: number };
 
-export function ZoneMap({ features = EMPTY_ZONES, showRiskZones = true, focusBounds, onZonePress = ignoreZonePress, mapStyle, userLocation, zoomControlTop, zoomControlBottom, onLoad, onError, onMapPress, onCameraChange }: MapContainerProps) {
+export function ZoneMap({
+  features = EMPTY_ZONES,
+  showRiskZones = true,
+  focusBounds,
+  onZonePress = ignoreZonePress,
+  mapStyle,
+  userLocation,
+  selectedLocation,
+  zoomControlTop,
+  zoomControlBottom,
+  onLoad,
+  onError,
+  onMapPress,
+  onCameraChange,
+}: MapContainerProps) {
   const { theme } = useTheme();
-  const [mapState, setMapState] = useState<MapState>('loading');
+  const [mapState, setMapState] = useState<MapState>("loading");
   const webView = useRef<WebView>(null);
-  const controlsScript = `window.positionControls?.(${zoomControlBottom ?? 'null'}); true;`;
+  const controlsScript = `window.positionControls?.(${zoomControlBottom ?? "null"}); true;`;
   useEffect(() => {
     webView.current?.injectJavaScript(controlsScript);
   }, [controlsScript]);
@@ -23,9 +55,15 @@ export function ZoneMap({ features = EMPTY_ZONES, showRiskZones = true, focusBou
   useEffect(() => {
     webView.current?.injectJavaScript(layersScript);
   }, [layersScript]);
+  const selectedLocationScript = `window.updateSelectedLocation?.(${JSON.stringify(selectedLocation)}); true;`;
+
+  useEffect(() => {
+    webView.current?.injectJavaScript(selectedLocationScript);
+  }, [selectedLocationScript]);
+
   const focusScript = focusBounds
     ? `window.focusZone?.(${JSON.stringify(focusBounds)}); true;`
-    : 'true;';
+    : "true;";
   useEffect(() => {
     webView.current?.injectJavaScript(focusScript);
   }, [focusScript, focusBounds]);
@@ -41,9 +79,11 @@ export function ZoneMap({ features = EMPTY_ZONES, showRiskZones = true, focusBou
         name: feature.properties.name,
         riskLevel: feature.properties.riskLevel,
         color: getZoneColor(feature.properties.riskLevel, theme),
-        coordinates: getZoneCoordinates(feature).map(({ latitude, longitude }) => [latitude, longitude]),
+        coordinates: getZoneCoordinates(feature).map(
+          ({ latitude, longitude }) => [latitude, longitude],
+        ),
       })),
-    }).replace(/</g, '\\u003c');
+    }).replace(/</g, "\\u003c");
 
     return `<!doctype html>
 <html lang="es">
@@ -70,6 +110,29 @@ export function ZoneMap({ features = EMPTY_ZONES, showRiskZones = true, focusBou
   <script>
     try {
       const map = L.map('map', { zoomControl: false, attributionControl: true }).setView([DATA.initialCenter[1], DATA.initialCenter[0]], DATA.initialZoom);
+      let selectedMarker = null;
+
+window.updateSelectedLocation = (location) => {
+  if (selectedMarker) {
+    map.removeLayer(selectedMarker);
+    selectedMarker = null;
+  }
+
+  if (location) {
+    selectedMarker = L.circleMarker(
+      [location.latitude, location.longitude],
+      {
+        radius: 11,
+        color: '#FFFFFF',
+        weight: 3,
+        fillColor: '#E53935',
+        fillOpacity: 1
+      }
+    ).addTo(map);
+
+    selectedMarker.bindTooltip('Ubicación seleccionada');
+  }
+};
       map.attributionControl.setPrefix(false);
       Object.assign(map.attributionControl.getContainer().style, { fontSize: '10px', lineHeight: '14px', padding: '0 4px' });
       window.focusZone = ([west, south, east, north]) => {
@@ -139,7 +202,7 @@ export function ZoneMap({ features = EMPTY_ZONES, showRiskZones = true, focusBou
         }).addTo(map).bindTooltip('Tu ubicación');
         map.setView([DATA.userLocation.latitude, DATA.userLocation.longitude], 13);
       }
-
+      window.updateSelectedLocation(${JSON.stringify(selectedLocation)});
       setTimeout(() => map.invalidateSize(true), 250);
       report({ type: 'ready' });
     } catch (error) {
@@ -148,66 +211,86 @@ export function ZoneMap({ features = EMPTY_ZONES, showRiskZones = true, focusBou
   </script>
 </body>
 </html>`;
-  }, [features, theme, userLocation, zoomControlTop]);
-  const source = useMemo(() => ({ html, baseUrl: 'https://localhost' }), [html]);
+  }, [features, theme, userLocation,selectedLocation, zoomControlTop]);
+  const source = useMemo(
+    () => ({ html, baseUrl: "https://localhost" }),
+    [html],
+  );
 
   const handleMessage = (event: WebViewMessageEvent) => {
     try {
       const message = JSON.parse(event.nativeEvent.data) as MapMessage;
-      if (message.type === 'ready' || message.type === 'tiles-ready') {
-        setMapState('ready');
-        if (message.type === 'ready') {
+      if (message.type === "ready" || message.type === "tiles-ready") {
+        setMapState("ready");
+        if (message.type === "ready") {
           onLoad?.();
           webView.current?.injectJavaScript(layersScript);
           webView.current?.injectJavaScript(controlsScript);
+          webView.current?.injectJavaScript(selectedLocationScript);
           webView.current?.injectJavaScript(focusScript);
         }
-      } else if (message.type === 'tile-error') {
-        setMapState((current) => current === 'ready' ? current : 'tiles-error');
-      } else if (message.type === 'engine-error') {
-        setMapState('engine-error');
+      } else if (message.type === "tile-error") {
+        setMapState((current) =>
+          current === "ready" ? current : "tiles-error",
+        );
+      } else if (message.type === "engine-error") {
+        setMapState("engine-error");
         onError?.();
-      } else if (message.type === 'map-press') {
+      } else if (message.type === "map-press") {
         onMapPress?.(message.coordinate);
-      } else if (message.type === 'camera-change') {
+      } else if (message.type === "camera-change") {
         onCameraChange?.({ center: message.center, zoom: message.zoom });
-      } else if (message.type === 'zone-press' && message.id) {
+      } else if (message.type === "zone-press" && message.id) {
         onZonePress(message.id);
       }
     } catch {
-      setMapState('engine-error');
+      setMapState("engine-error");
     }
   };
 
-  const statusMessage = mapState === 'loading'
-    ? 'Iniciando mapa…'
-    : mapState === 'engine-error'
-      ? 'No se pudo iniciar Leaflet. Revisá la conexión para descargar el motor del mapa.'
-      : mapState === 'tiles-error'
-        ? 'El mapa inició, pero no llegan las imágenes del mapa. Revisá la conexión.'
-        : null;
+  const statusMessage =
+    mapState === "loading"
+      ? "Iniciando mapa…"
+      : mapState === "engine-error"
+        ? "No se pudo iniciar Leaflet. Revisá la conexión para descargar el motor del mapa."
+        : mapState === "tiles-error"
+          ? "El mapa inició, pero no llegan las imágenes del mapa. Revisá la conexión."
+          : null;
 
   return (
     <View style={styles.container}>
       <WebView
         ref={webView}
         key={html}
-        originWhitelist={['*']}
+        originWhitelist={["*"]}
         source={source}
         javaScriptEnabled
         domStorageEnabled
         mixedContentMode="never"
         onMessage={handleMessage}
-        onError={() => setMapState('engine-error')}
+        onError={() => setMapState("engine-error")}
         onHttpError={(event) => {
-          if (event.nativeEvent.statusCode >= 400) setMapState('tiles-error');
+          if (event.nativeEvent.statusCode >= 400) setMapState("tiles-error");
         }}
         style={styles.webView}
         containerStyle={styles.webViewContainer}
       />
       {statusMessage && (
-        <View pointerEvents="none" style={[styles.status, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <Text style={[styles.statusText, { color: theme.colors.textPrimary }]}>{statusMessage}</Text>
+        <View
+          pointerEvents="none"
+          style={[
+            styles.status,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          <Text
+            style={[styles.statusText, { color: theme.colors.textPrimary }]}
+          >
+            {statusMessage}
+          </Text>
         </View>
       )}
     </View>
@@ -216,18 +299,18 @@ export function ZoneMap({ features = EMPTY_ZONES, showRiskZones = true, focusBou
 
 const styles = StyleSheet.create({
   container: StyleSheet.absoluteFill,
-  webViewContainer: { flex: 1, backgroundColor: '#E8EEF2' },
-  webView: { flex: 1, backgroundColor: '#E8EEF2' },
+  webViewContainer: { flex: 1, backgroundColor: "#E8EEF2" },
+  webView: { flex: 1, backgroundColor: "#E8EEF2" },
   status: {
-    position: 'absolute',
+    position: "absolute",
     top: 12,
     left: 18,
     right: 18,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  statusText: { fontSize: 12, fontWeight: '600', textAlign: 'center' },
+  statusText: { fontSize: 12, fontWeight: "600", textAlign: "center" },
 });

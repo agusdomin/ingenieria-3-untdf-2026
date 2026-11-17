@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { SymbolView, type SymbolViewProps } from "expo-symbols";
 import { DateRangePicker, AppTimePicker } from "../../components/forms";
 import { MoreOptionsButton } from "../../components/navigation/MoreOptionsButton";
+import { MapContainer } from "../../components/map/MapContainer";
 import { useCreateOuting } from "../../queries/outings.queries";
 import { useTheme } from "../../theme/useTheme";
 
@@ -39,11 +40,13 @@ function mergeDate(date: Date, time: Date) {
 export function PlanningScreen() {
   const { theme } = useTheme();
   const createOutingMutation = useCreateOuting();
-  
-const [coordinates, setCoordinates] = useState<{
-  latitude: number;
-  longitude: number;
-} | null>(null);  const [departure, setDeparture] = useState(() => initialTime(8));
+
+  const [coordinates, setCoordinates] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+
+  const [departure, setDeparture] = useState(() => initialTime(8));
   const [returnDate, setReturnDate] = useState(() => initialTime(16, 30));
   const [companions, setCompanions] = useState(0);
   const [editor, setEditor] = useState<
@@ -60,51 +63,51 @@ const [coordinates, setCoordinates] = useState<{
   };
 
   function handleCreateOuting() {
-  if (!coordinates) {
-    Alert.alert(
-      "Ubicación requerida",
-      "Seleccioná una ubicación para planificar la salida."
+    if (!coordinates) {
+      Alert.alert(
+        "Ubicación requerida",
+        "Seleccioná una ubicación para planificar la salida.",
+      );
+      return;
+    }
+
+    createOutingMutation.mutate(
+      {
+        coordenadas: {
+          latitude: coordinates.latitude,
+          longitude: coordinates.longitude,
+        },
+
+        fecha_hora_inicio: departure.toISOString(),
+        fecha_hora_retorno: returnDate.toISOString(),
+        cantidad_acompanantes: companions,
+
+        itinerario_descripcion:
+          "Salida planificada desde la ubicación seleccionada.",
+      },
+
+      {
+        onSuccess: () => {
+          Alert.alert(
+            "Salida registrada",
+            "Tu planificación se guardó correctamente.",
+          );
+
+          reset();
+        },
+
+        onError: () => {
+          Alert.alert(
+            "No se pudo registrar",
+            "Verificá tu conexión y que hayas iniciado sesión para registrar una salida.",
+          );
+        },
+      },
     );
-    return;
   }
 
-  createOutingMutation.mutate(
-    {
-      coordenadas: {
-        latitude: coordinates.latitude,
-        longitude: coordinates.longitude,
-      },
-
-      fecha_hora_inicio: departure.toISOString(),
-      fecha_hora_retorno: returnDate.toISOString(),
-      cantidad_acompanantes: companions,
-
-      itinerario_descripcion:
-        "Salida planificada desde la ubicación seleccionada.",
-    },
-
-    {
-      onSuccess: () => {
-        Alert.alert(
-          "Salida registrada",
-          "Tu planificación se guardó correctamente."
-        );
-
-        reset();
-      },
-
-      onError: () => {
-        Alert.alert(
-          "No se pudo registrar",
-          "Verificá tu conexión y que hayas iniciado sesión para registrar una salida."
-        );
-      },
-    }
-  );
-}
-
   function reset() {
-setCoordinates(null);
+    setCoordinates(null);
     setDeparture(initialTime(8));
     setReturnDate(initialTime(16, 30));
     setCompanions(0);
@@ -117,49 +120,49 @@ setCoordinates(null);
       edges={["top"]}
       style={[styles.screen, { backgroundColor: theme.colors.background }]}
     >
-    <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-      <View style={styles.headerTitle}>
-        <SymbolView
-          name={{
-            ios: "point.topleft.down.to.point.bottomright.curvepath",
-            android: "route",
-            web: "route",
-          }}
-          size={23}
-          tintColor={theme.colors.primary}
-        />
-        <Text accessibilityRole="header" style={[styles.title, primaryText]}>
-          Planificar salida
-        </Text>
-      </View>
+      <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+        <View style={styles.headerTitle}>
+          <SymbolView
+            name={{
+              ios: "point.topleft.down.to.point.bottomright.curvepath",
+              android: "route",
+              web: "route",
+            }}
+            size={23}
+            tintColor={theme.colors.primary}
+          />
+          <Text accessibilityRole="header" style={[styles.title, primaryText]}>
+            Planificar salida
+          </Text>
+        </View>
 
-    <MoreOptionsButton />
-  </View>
+        <MoreOptionsButton />
+      </View>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={[styles.card, surface]}>
           <Text style={[styles.sectionTitle, primaryText]}>
             Declaración de itinerario
           </Text>
           <PlanningRow
-  label="Ubicación"
-  value={
-    coordinates
-      ? `${coordinates.latitude.toFixed(5)}, ${coordinates.longitude.toFixed(5)}`
-      : "Seleccionar ubicación"
-  }
-  icon={{
-    ios: "mappin.and.ellipse",
-    android: "location_on",
-    web: "location_on",
-  }}
-  onPress={() => setEditor("location")}
-/>
+            label="Ubicación"
+            value={
+              coordinates
+                ? `${coordinates.latitude.toFixed(5)}, ${coordinates.longitude.toFixed(5)}`
+                : "Seleccionar ubicación"
+            }
+            icon={{
+              ios: "mappin.and.ellipse",
+              android: "location_on",
+              web: "location_on",
+            }}
+            onPress={() => setEditor("location")}
+          />
 
-{showErrors && !coordinates ? (
-  <Text style={{ color: theme.colors.danger }}>
-    Seleccioná una ubicación.
-  </Text>
-) : null}
+          {showErrors && !coordinates ? (
+            <Text style={{ color: theme.colors.danger }}>
+              Seleccioná una ubicación.
+            </Text>
+          ) : null}
           <PlanningRow
             label="Salida / regreso"
             value={`${timeLabel(departure)} – ${timeLabel(returnDate)}`}
@@ -204,9 +207,9 @@ setCoordinates(null);
             tintColor={theme.colors.warning}
           />
           <Text style={[styles.noticeText, primaryText]}>
-  Consultá el boletín y las condiciones del manto antes de salir.
-  El peligro del área seleccionada aún no está disponible en esta vista.
-</Text>
+            Consultá el boletín y las condiciones del manto antes de salir. El
+            peligro del área seleccionada aún no está disponible en esta vista.
+          </Text>
         </View>
 
         <Pressable
@@ -257,7 +260,6 @@ setCoordinates(null);
             Cancelar planificación
           </Text>
         </Pressable>
-        
       </ScrollView>
 
       <Modal
@@ -273,7 +275,7 @@ setCoordinates(null);
                 accessibilityRole="header"
                 style={[styles.sheetTitle, primaryText]}
               >
-               {editor === "location"
+                {editor === "location"
                   ? "Elegir ubicación"
                   : editor === "schedule"
                     ? "Salida y regreso"
@@ -296,50 +298,74 @@ setCoordinates(null);
             </View>
             <ScrollView contentContainerStyle={styles.editorContent}>
               {editor === "location" ? (
-  <>
-    <Text
-      style={[
-        theme.typography.bodySmall,
-        secondaryText,
-      ]}
-    >
-      Seleccioná la ubicación de la salida.
-    </Text>
+                <>
+                  <Text style={[theme.typography.bodySmall, secondaryText]}>
+                    Seleccioná la ubicación de la salida.
+                  </Text>
 
-    <View
-      style={[
-        styles.locationCard,
-        {
-          backgroundColor: theme.colors.surfaceSecondary,
-          borderColor: theme.colors.border,
-        },
-      ]}
-    >
-      {coordinates ? (
-        <>
-<Text style={[styles.sectionTitle, primaryText]}>            Ubicación seleccionada
-          </Text>
+                  <View
+                    style={[
+                      styles.locationCard,
+                      {
+                        backgroundColor: theme.colors.surfaceSecondary,
+                        borderColor: theme.colors.border,
+                      },
+                    ]}
+                  >
+                    {coordinates ? (
+                      <>
+                        <Text style={[styles.sectionTitle, primaryText]}>
+                          {" "}
+                          Ubicación seleccionada
+                        </Text>
 
-          <Text style={secondaryText}>
-            Latitud: {coordinates.latitude.toFixed(5)}
-          </Text>
+                        <Text style={secondaryText}>
+                          Latitud: {coordinates.latitude.toFixed(5)}
+                        </Text>
 
-          <Text style={secondaryText}>
-            Longitud: {coordinates.longitude.toFixed(5)}
-          </Text>
-        </>
-      ) : (
-        <Text style={secondaryText}>
-          Todavía no seleccionaste una ubicación.
-        </Text>
-      )}
-    </View>
+                        <Text style={secondaryText}>
+                          Longitud: {coordinates.longitude.toFixed(5)}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={secondaryText}>
+                        Todavía no seleccionaste una ubicación.
+                      </Text>
+                    )}
+                  </View>
 
-    <Text style={[styles.prototypeNote, secondaryText]}>
-      La selección de coordenadas desde el mapa se integrará en esta vista.
-    </Text>
-  </>
-) : null}
+                  {/* <Text style={[styles.prototypeNote, secondaryText]}> */}
+                    <View
+                      style={{
+                        height: 360,
+                        borderRadius: 16,
+                        overflow: "hidden",
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
+                      }}
+                    >
+                      <MapContainer
+                        mapStyle="terrain"
+                        userLocation={null}
+                        zoomControlTop={16}
+                        showRiskZones={false}
+                        selectedLocation={coordinates}
+                        onMapPress={(coordinate) =>
+                          setCoordinates({
+                            latitude: coordinate[1],
+                            longitude: coordinate[0],
+                          })
+                        }
+                      />
+                    </View>
+
+                    <Text style={[theme.typography.bodySmall, secondaryText]}>
+                      Tocá el mapa para marcar el punto de partida. Podés mover
+                      el marcador seleccionando otra ubicación.
+                    </Text>
+                  {/* </Text> */}
+                </>
+              ) : null}
               {editor === "schedule" ? (
                 <>
                   <DateRangePicker
@@ -473,14 +499,14 @@ setCoordinates(null);
               {editor === "review" ? (
                 <>
                   <Text style={[styles.sectionTitle, primaryText]}>
-  Ubicación seleccionada
-</Text>
+                    Ubicación seleccionada
+                  </Text>
 
-<Text style={secondaryText}>
-  {coordinates
-    ? `${coordinates.latitude.toFixed(5)}, ${coordinates.longitude.toFixed(5)}`
-    : "Sin ubicación"}
-</Text>
+                  <Text style={secondaryText}>
+                    {coordinates
+                      ? `${coordinates.latitude.toFixed(5)}, ${coordinates.longitude.toFixed(5)}`
+                      : "Sin ubicación"}
+                  </Text>
                   <Text style={secondaryText}>
                     Salida: {dateLabel(departure)} · {timeLabel(departure)}
                   </Text>
@@ -540,36 +566,36 @@ setCoordinates(null);
                 </>
               ) : null}
               <Pressable
-  accessibilityRole="button"
-  disabled={editor === "location" && !coordinates}
-  onPress={() => setEditor(null)}
-  style={({ pressed }) => [
-    styles.primaryButton,
-    {
-      backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
-      opacity:
-        editor === "location" && !coordinates
-          ? 0.45
-          : pressed
-            ? 0.75
-            : 1,
-    },
-  ]}
->
-  <Text
-    style={[
-      styles.buttonText,
-      { color: theme.colors.textInverse },
-    ]}
-  >
-    {editor === "review"
-      ? "Volver a editar"
-      : editor === "location"
-        ? "Usar esta ubicación"
-        : "Listo"}
-  </Text>
-</Pressable>
+                accessibilityRole="button"
+                disabled={editor === "location" && !coordinates}
+                onPress={() => setEditor(null)}
+                style={({ pressed }) => [
+                  styles.primaryButton,
+                  {
+                    backgroundColor: theme.colors.primary,
+                    borderColor: theme.colors.primary,
+                    opacity:
+                      editor === "location" && !coordinates
+                        ? 0.45
+                        : pressed
+                          ? 0.75
+                          : 1,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.buttonText,
+                    { color: theme.colors.textInverse },
+                  ]}
+                >
+                  {editor === "review"
+                    ? "Volver a editar"
+                    : editor === "location"
+                      ? "Usar esta ubicación"
+                      : "Listo"}
+                </Text>
+              </Pressable>
             </ScrollView>
           </SafeAreaView>
         </View>
@@ -753,11 +779,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   locationCard: {
-  padding: 16,
-  borderWidth: 1,
-  borderRadius: 16,
-  gap: 8,
-},
+    padding: 16,
+    borderWidth: 1,
+    borderRadius: 16,
+    gap: 8,
+  },
   counter: {
     flexDirection: "row",
     alignItems: "center",
