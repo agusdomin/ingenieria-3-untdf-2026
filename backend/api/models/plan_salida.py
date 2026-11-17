@@ -61,4 +61,3 @@ class PlanSalida(models.Model):
                 elif self.fecha_hora_inicio > ahora:
                     self.estado = self.Estado.PENDIENTE
         super().save(*args, **kwargs)
-

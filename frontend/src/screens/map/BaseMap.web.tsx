@@ -13,6 +13,7 @@ export function BaseMap({
   focusBounds,
   mapStyle,
   userLocation,
+  selectedLocation,
   zoomControlTop,
   zoomControlBottom,
   onLoad,
@@ -84,6 +85,42 @@ export function BaseMap({
       tiles?.remove();
     };
   }, [mapStyle, mapVersion]);
+    useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    let disposed = false;
+    let marker: import('leaflet').CircleMarker | undefined;
+
+    void import('leaflet').then((L) => {
+      if (disposed) return;
+
+      if (!selectedLocation) return;
+
+      marker = L.circleMarker(
+        [
+          selectedLocation.latitude,
+          selectedLocation.longitude,
+        ],
+        {
+          radius: 9,
+          color: '#FFFFFF',
+          weight: 3,
+          fillColor: theme.colors.primary,
+          fillOpacity: 1,
+        }
+      )
+        .bindTooltip('Ubicación seleccionada')
+        .addTo(map);
+    });
+
+    return () => {
+      disposed = true;
+      marker?.remove();
+    };
+  }, [selectedLocation, theme, mapVersion]);
+
+
 
   useEffect(() => {
     if (!focusBounds || !mapRef.current) return;
