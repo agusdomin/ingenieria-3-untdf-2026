@@ -16,6 +16,7 @@ class PlanSalidaViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        PlanSalida.actualizar_estados()
         user = self.request.user
         if not user or not user.is_authenticated:
             return PlanSalida.objects.none()
@@ -93,6 +94,9 @@ class PlanSalidaViewSet(viewsets.ModelViewSet):
                     {'detail': 'El radio debe ser un número positivo mayor a 0.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+
+        # Actualizamos estados para asegurar que los planes activos reflejen la hora actual
+        PlanSalida.actualizar_estados()
 
         # Consultamos solo los campos estrictamente necesarios (coordenadas y acompanantes)
         # de planes EN_CURSO para optimizar al maximo memoria y transferencia de la BD.
