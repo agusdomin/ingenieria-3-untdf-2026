@@ -125,35 +125,62 @@ export function BaseMap({
     if (!map) return;
 
     let disposed = false;
-    let marker: import('leaflet').CircleMarker | undefined;
+    let marker: import('leaflet').Marker | undefined;
+    let radiusCircle: import('leaflet').Circle | undefined;
 
     void import('leaflet').then((L) => {
       if (disposed) return;
 
       if (!selectedLocation) return;
 
-      marker = L.circleMarker(
-        [
-          selectedLocation.latitude,
-          selectedLocation.longitude,
-        ],
+      const radiusMeters = selectedLocation.radius ?? 1000;
+
+      radiusCircle = L.circle(
+        [selectedLocation.latitude, selectedLocation.longitude],
         {
-          radius: 9,
-          color: '#FFFFFF',
-          weight: 3,
-          fillColor: theme.colors.primary,
-          fillOpacity: 1,
+          radius: radiusMeters,
+          color: '#EA4335',
+          weight: 2,
+          fillColor: '#EA4335',
+          fillOpacity: 0.16,
         }
+      ).addTo(map);
+
+      const pinIcon = L.divIcon({
+        className: '',
+        iconSize: [32, 42],
+        iconAnchor: [16, 42],
+        tooltipAnchor: [0, -38],
+        html: `<svg width="32" height="42" viewBox="0 0 32 42" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.35));">
+          <path d="M16 0C7.163 0 0 7.163 0 16C0 27.2 14.2 40.4 15.1 41.2C15.6 41.7 16.4 41.7 16.9 41.2C17.8 40.4 32 27.2 32 16C32 7.163 24.837 0 16 0Z" fill="#EA4335" stroke="#FFFFFF" stroke-width="1.5"/>
+          <circle cx="16" cy="16" r="6" fill="#B31412"/>
+        </svg>`,
+      });
+
+      marker = L.marker(
+        [selectedLocation.latitude, selectedLocation.longitude],
+        { icon: pinIcon }
       )
-        .bindTooltip('Ubicación seleccionada')
+        .bindTooltip(`Ubicación seleccionada (radio ${radiusMeters} m)`)
         .addTo(map);
+
+      map.invalidateSize();
+      const mapHeight = map.getSize().y || 600;
+      const bottomPad = selectedLocation.radius ? Math.round(mapHeight * 0.50) : 48;
+      map.flyToBounds(radiusCircle.getBounds(), {
+        paddingTopLeft: [36, Math.max(72, zoomControlTop ?? 0)],
+        paddingBottomRight: [36, bottomPad],
+        maxZoom: 15,
+        duration: 0.45,
+      });
     });
 
     return () => {
       disposed = true;
       marker?.remove();
+      radiusCircle?.remove();
     };
-  }, [selectedLocation, theme, mapVersion]);
+  }, [selectedLocation, theme, mapVersion, zoomControlTop]);
 
 
 

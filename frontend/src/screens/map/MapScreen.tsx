@@ -153,12 +153,12 @@ export function MapScreen() {
       Keyboard.dismiss();
       setSelectedEventId(null);
       setSelectedObservationAreaId(null);
-      setTrafficLocation({ latitude, longitude, radius: 500 });
+      setTrafficLocation({ latitude, longitude, radius: 1000 });
 
       setSelectedArea({
         latitude,
         longitude,
-        radius: 500,
+        radius: 1000,
       });
     },
     [],
@@ -193,6 +193,7 @@ export function MapScreen() {
           onObservationAreaPress={handleObservationAreaPress}
           onEventPress={handleEventPress}
           trafficArea={showTraffic && isAuthenticated ? trafficQuery.data : null}
+          selectedLocation={selectedArea}
           onMapPress={handleMapPress}
           userLocation={userLocation}
           zoomControlTop={insets.top + 64}

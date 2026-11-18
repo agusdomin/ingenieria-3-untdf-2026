@@ -26,5 +26,6 @@ export interface MapContainerProps extends ZoneMapProps {
   selectedLocation?: {
     latitude: number;
     longitude: number;
+    radius?: number;
   } | null;
 }

@@ -209,6 +209,11 @@ export function NewObservationScreen() {
                 <MapContainer
                   mapStyle="terrain"
                   userLocation={null}
+                  selectedLocation={
+                    coordinate
+                      ? { longitude: coordinate[0], latitude: coordinate[1] }
+                      : null
+                  }
                   zoomControlTop={16}
                   onMapPress={handleMapPress}
                 />

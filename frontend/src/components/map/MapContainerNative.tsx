@@ -95,11 +95,39 @@ export function MapContainerNative({
   useEffect(() => {
     if (ready && focusBounds) {
       camera.current?.fitBounds(focusBounds, {
-        padding: { top: zoomControlTop + 32, bottom: 120, left: 72, right: 72 },
+        padding: { top: (zoomControlTop ?? 16) + 32, bottom: 120, left: 72, right: 72 },
         duration: 600,
       });
     }
   }, [ready, focusBounds, zoomControlTop]);
+
+  useEffect(() => {
+    if (ready && selectedLocation) {
+      const circleGeo = circle(
+        [selectedLocation.longitude, selectedLocation.latitude],
+        (selectedLocation.radius ?? 1000) / 1000,
+        { steps: 64, units: "kilometers" }
+      );
+      const coords = circleGeo.geometry.coordinates[0];
+      const lons = coords.map((c) => c[0]);
+      const lats = coords.map((c) => c[1]);
+      const bounds: [number, number, number, number] = [
+        Math.min(...lons),
+        Math.min(...lats),
+        Math.max(...lons),
+        Math.max(...lats),
+      ];
+      camera.current?.fitBounds(bounds, {
+        padding: {
+          top: Math.max(72, zoomControlTop ?? 16),
+          bottom: selectedLocation.radius ? 360 : 60,
+          left: 36,
+          right: 36,
+        },
+        duration: 450,
+      });
+    }
+  }, [ready, selectedLocation, zoomControlTop]);
 
   function changeZoom(delta: number) {
     zoom.current = Math.max(2, Math.min(maxZoom, zoom.current + delta));
@@ -196,27 +224,54 @@ export function MapContainerNative({
           </GeoJSONSource>
         )}
         {selectedLocation && (
-          <GeoJSONSource
-            id="selected-location"
-            data={{
-              type: "Point",
-              coordinates: [
-                selectedLocation.longitude,
-                selectedLocation.latitude,
-              ],
-            }}
-          >
-            <Layer
-              id="selected-location-dot"
-              type="circle"
-              paint={{
-                "circle-radius": 11,
-                "circle-color": "#E53935",
-                "circle-stroke-color": "#FFFFFF",
-                "circle-stroke-width": 3,
+          <>
+            <GeoJSONSource
+              id="selected-location-radius"
+              data={circle(
+                [selectedLocation.longitude, selectedLocation.latitude],
+                (selectedLocation.radius ?? 1000) / 1000,
+                { steps: 64, units: "kilometers" }
+              )}
+            >
+              <Layer
+                id="selected-location-radius-fill"
+                type="fill"
+                paint={{
+                  "fill-color": "#EA4335",
+                  "fill-opacity": 0.16,
+                }}
+              />
+              <Layer
+                id="selected-location-radius-line"
+                type="line"
+                paint={{
+                  "line-color": "#EA4335",
+                  "line-width": 2,
+                }}
+              />
+            </GeoJSONSource>
+            <GeoJSONSource
+              id="selected-location"
+              data={{
+                type: "Point",
+                coordinates: [
+                  selectedLocation.longitude,
+                  selectedLocation.latitude,
+                ],
               }}
-            />
-          </GeoJSONSource>
+            >
+              <Layer
+                id="selected-location-dot"
+                type="circle"
+                paint={{
+                  "circle-radius": 11,
+                  "circle-color": "#EA4335",
+                  "circle-stroke-color": "#FFFFFF",
+                  "circle-stroke-width": 3,
+                }}
+              />
+            </GeoJSONSource>
+          </>
         )}
 
         {children}

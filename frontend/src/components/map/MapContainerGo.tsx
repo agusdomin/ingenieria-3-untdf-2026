@@ -13,8 +13,9 @@ const send=(type,data)=>window.ReactNativeWebView.postMessage(JSON.stringify({ty
 try {
 const map=L.map('map',{zoomControl:false}).setView([-54.81,-68.3],11);
 L.control.zoom({position:'topright'}).addTo(map);
-let base,style,previousLocation,previousBounds;
+let base,style,previousLocation,previousSelectedLocation,previousBounds;
 const overlay=L.layerGroup().addTo(map);
+const pinIcon=L.divIcon({className:'',iconSize:[32,42],iconAnchor:[16,42],tooltipAnchor:[0,-38],html:'<svg width="32" height="42" viewBox="0 0 32 42" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0px 2px 4px rgba(0,0,0,0.35));"><path d="M16 0C7.163 0 0 7.163 0 16C0 27.2 14.2 40.4 15.1 41.2C15.6 41.7 16.4 41.7 16.9 41.2C17.8 40.4 32 27.2 32 16C32 7.163 24.837 0 16 0Z" fill="#EA4335" stroke="#FFFFFF" stroke-width="1.5"/><circle cx="16" cy="16" r="6" fill="#B31412"/></svg>'});
 map.on('click',e=>send('map',[e.latlng.lng,e.latlng.lat]));
 map.on('moveend',()=>send('camera',{center:[map.getCenter().lng,map.getCenter().lat],zoom:map.getZoom()}));
 window.updateMap=p=>{
@@ -39,7 +40,7 @@ window.updateMap=p=>{
  });
  if(p.userLocation){const u=p.userLocation;L.circleMarker([u.latitude,u.longitude],{radius:8,color:'white',fillColor:'#176B91',fillOpacity:1}).addTo(overlay);
  if(JSON.stringify(u)!==previousLocation){map.setView([u.latitude,u.longitude],13);previousLocation=JSON.stringify(u);}}
- if(p.selectedLocation){const u=p.selectedLocation;L.circleMarker([u.latitude,u.longitude],{radius:9,color:'white',fillColor:'#E53935',fillOpacity:1}).addTo(overlay);}
+ if(p.selectedLocation){const u=p.selectedLocation;const r=u.radius||1000;const c=L.circle([u.latitude,u.longitude],{radius:r,color:'#EA4335',weight:2,fillColor:'#EA4335',fillOpacity:.16,interactive:false}).addTo(overlay);L.marker([u.latitude,u.longitude],{icon:pinIcon,interactive:false}).addTo(overlay);if(JSON.stringify(u)!==previousSelectedLocation){map.invalidateSize();const h=map.getSize().y||window.innerHeight||600;map.flyToBounds(c.getBounds(),{paddingTopLeft:[36,Math.max(72,p.zoomControlTop||0)],paddingBottomRight:[36,u.radius?Math.round(h*.5):48],maxZoom:15,duration:.45});previousSelectedLocation=JSON.stringify(u);}}else{previousSelectedLocation=null;}
  if(p.focusBounds&&JSON.stringify(p.focusBounds)!==previousBounds){const b=p.focusBounds;map.fitBounds([[b[1],b[0]],[b[3],b[2]]],{padding:[60,100],maxZoom:16});previousBounds=JSON.stringify(b);}
 };send('ready');
 }catch(e){send('error');}
@@ -57,7 +58,7 @@ export function MapContainerGo(props: MapContainerProps) {
     if (ready) ref.current?.injectJavaScript(`window.updateMap(${payload});true;`);
   }, [ready, payload]);
   return <View style={{ flex: 1 }}>
-    <WebView ref={ref} source={{ html }} originWhitelist={['*']} style={{ flex: 1 }}
+    <WebView ref={ref} source={{ html, baseUrl: 'https://localhost' }} originWhitelist={['*']} style={{ flex: 1 }}
       onError={() => { setFailed(true); props.onError?.(); }}
       onMessage={({ nativeEvent }) => {
         try {

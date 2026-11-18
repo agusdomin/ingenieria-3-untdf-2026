@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import {
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -64,7 +65,12 @@ export function AppBottomSheet({
             </Text>
           ) : null}
 
-          {children}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {children}
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -79,16 +85,17 @@ const styles = StyleSheet.create({
 
   backdrop: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(0,0,0,0.25)",
+    backgroundColor: "rgba(0,0,0,0.08)",
   },
 
   sheet: {
+    maxHeight: "48%",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderWidth: 1,
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 28,
+    paddingBottom: 24,
     minHeight: 180,
   },
 
