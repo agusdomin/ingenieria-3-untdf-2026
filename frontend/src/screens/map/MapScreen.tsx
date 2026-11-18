@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { distance } from "@turf/turf";
 import { observationAreas } from '../../components/map/observationAreas';
 import { ObservationAreaSheet } from '../../components/map/ObservationAreaSheet';
 
@@ -24,9 +25,10 @@ import {
 import { MapAccountModal } from "../../components/auth/MapAccountModal";
 import { LoginGateModal } from '../../components/auth/LoginGateModal';
 import { MapContainer } from "../../components/map/MapContainer";
+import { INITIAL_CENTER } from "../../components/map/MapContainer.types";
 import { MapLayersSheet } from "../../components/map/MapLayersSheet";
 import { MapEventSheet } from '../../components/map/MapEventSheet';
-import { mapEvents } from '../../components/map/mapEvents';
+import { mapEvents, type MapEvent } from '../../components/map/mapEvents';
 import { useObservations } from '../../queries/observations.queries';
 import { useReports } from '../../queries/reports.queries';
 import { useAuth } from '../../contexts/AuthContext';
@@ -47,7 +49,7 @@ export function MapScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, hasRole } = useAuth();
   const observationsQuery = useObservations();
   const reportsQuery = useReports();
   const [showObservations, setShowObservations] = useState(true);
@@ -56,6 +58,8 @@ export function MapScreen() {
   const [selectedObservationAreaId, setSelectedObservationAreaId] = useState<string | null>(null);
   const [showTraffic, setShowTraffic] = useState(true);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedArea, setSelectedArea] = useState<SelectedArea | null>(null);
+  const [trafficLocation, setTrafficLocation] = useState<SelectedArea | null>(null);
   const allEvents = useMemo(() => mapEvents(
     observationsQuery.data ?? [], reportsQuery.data ?? [],
   ), [observationsQuery.data, reportsQuery.data]);
@@ -68,7 +72,31 @@ export function MapScreen() {
   const reportCount = allEvents.length - observationCount;
   const observationStatus = layerStatus(observationsQuery, observationCount);
   const reportStatus = layerStatus(reportsQuery, reportCount);
-  const selectedEvent = events.find((event) => event.id === selectedEventId) ?? null;
+  const selectedEvent = allEvents.find((event) => event.id === selectedEventId) ?? null;
+
+  const [activityCategory, setActivityCategory] = useState<'observation' | 'report'>('observation');
+
+  const nearbyEvents = useMemo(() => {
+    if (!selectedArea) return { observations: [] as MapEvent[], reports: [] as MapEvent[] };
+    const center: [number, number] = [selectedArea.longitude, selectedArea.latitude];
+    const observations: MapEvent[] = [];
+    const reports: MapEvent[] = [];
+    for (const ev of allEvents) {
+      if (distance(center, ev.coordinate, { units: 'kilometers' }) <= 1) {
+        if (ev.kind === 'observation') {
+          observations.push(ev);
+        } else {
+          reports.push(ev);
+        }
+      }
+    }
+    return { observations, reports };
+  }, [selectedArea, allEvents]);
+
+  const activeCategoryItems =
+    activityCategory === 'observation'
+      ? nearbyEvents.observations
+      : nearbyEvents.reports;
 
   const [focusBounds, setFocusBounds] =
     useState<[number, number, number, number]>();
@@ -88,9 +116,6 @@ export function MapScreen() {
     isFallback,
     retry,
   } = useLocation();
-  const [selectedArea, setSelectedArea] =
-  useState<SelectedArea | null>(null);
-  const [trafficLocation, setTrafficLocation] = useState<SelectedArea | null>(null);
   const handleEventPress = useCallback((id: string) => {
     setSelectedObservationAreaId(null);
     Keyboard.dismiss();
@@ -137,20 +162,106 @@ export function MapScreen() {
       : null,
   );
 
-  const meteorologyQuery = useCurrentMeteorology(
-    selectedArea
-      ? {
-          latitude: selectedArea.latitude,
-          longitude: selectedArea.longitude,
+  const weatherCoords = useMemo(() => {
+    if (selectedArea) {
+      return {
+        latitude: selectedArea.latitude,
+        longitude: selectedArea.longitude,
+      };
+    }
+    if (userLocation) {
+      return {
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+      };
+    }
+    return {
+      latitude: INITIAL_CENTER[1],
+      longitude: INITIAL_CENTER[0],
+    };
+  }, [selectedArea, userLocation]);
+
+  const meteorologyQuery = useCurrentMeteorology(weatherCoords);
+  const [isWeatherExpanded, setIsWeatherExpanded] = useState(false);
+
+  const todayFormatted = useMemo(() => {
+    return new Date().toLocaleDateString("es-AR", {
+      day: "2-digit",
+      month: "2-digit",
+    });
+  }, []);
+
+  const trafficBadge = useMemo(() => {
+    return (
+      <View
+        style={[
+          styles.trafficBadge,
+          {
+            backgroundColor: theme.colors.surfaceSecondary,
+            borderColor: theme.colors.border,
+          },
+        ]}
+        accessibilityRole="summary"
+        accessibilityLabel={
+          showTraffic && isAuthenticated && trafficQuery.data
+            ? `Afluencia en 1 km: ${trafficQuery.data.total_personas} personas`
+            : "Afluencia en 1 km"
         }
-      : null,
-  );
+      >
+        <SymbolView
+          name={{
+            ios: "figure.skiing.downhill",
+            android: "downhill_skiing",
+            web: "downhill_skiing",
+          }}
+          size={16}
+          tintColor={theme.colors.primary}
+        />
+        {trafficQuery.isLoading ? (
+          <ActivityIndicator
+            size="small"
+            color={theme.colors.primary}
+            style={{ transform: [{ scale: 0.7 }], width: 14, height: 14 }}
+          />
+        ) : (
+          <Text
+            style={[
+              styles.trafficBadgeText,
+              { color: theme.colors.textPrimary },
+            ]}
+          >
+            {showTraffic && isAuthenticated && trafficQuery.data
+              ? trafficQuery.data.total_personas
+              : trafficQuery.isError
+              ? "!"
+              : "—"}
+          </Text>
+        )}
+        <Text
+          style={[
+            styles.trafficBadgeText,
+            { color: theme.colors.textSecondary },
+          ]}
+        >
+          · 1 km
+        </Text>
+      </View>
+    );
+  }, [
+    trafficQuery.isLoading,
+    trafficQuery.isError,
+    trafficQuery.data,
+    showTraffic,
+    isAuthenticated,
+    theme.colors,
+  ]);
 
   const handleMapPress = useCallback(
     (coordinate: [number, number]) => {
       const [longitude, latitude] = coordinate;
 
       Keyboard.dismiss();
+      setIsWeatherExpanded(false);
       setSelectedEventId(null);
       setSelectedObservationAreaId(null);
       setTrafficLocation({ latitude, longitude, radius: 1000 });
@@ -199,6 +310,212 @@ export function MapScreen() {
           zoomControlTop={insets.top + 64}
           zoomControlBottom={zoomControlBottom}
         />
+      </View>
+
+      {/* Widget meteorológico flotante (esquina superior izquierda) */}
+      <View
+        pointerEvents="box-none"
+        style={[styles.weatherWidgetContainer, { top: insets.top + 8 }]}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            isWeatherExpanded
+              ? "Colapsar información meteorológica"
+              : `Clima hoy ${todayFormatted}: ${
+                  meteorologyQuery.data?.temperatura != null
+                    ? `${meteorologyQuery.data.temperatura} °C`
+                    : "Consultando"
+                }. Tocá para ver más detalles.`
+          }
+          onPress={() => setIsWeatherExpanded((prev) => !prev)}
+          style={({ pressed }) => [
+            styles.weatherWidgetPill,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+            },
+            pressed && styles.pressed,
+          ]}
+        >
+          <SymbolView
+            name={{
+              ios: "thermometer.medium",
+              android: "device_thermostat",
+              web: "device_thermostat",
+            }}
+            size={16}
+            tintColor={theme.colors.primary}
+          />
+          <Text
+            style={[
+              styles.weatherWidgetDate,
+              { color: theme.colors.textSecondary },
+            ]}
+          >
+            {todayFormatted}
+          </Text>
+          <Text style={{ color: theme.colors.border }}>·</Text>
+          {meteorologyQuery.isLoading ? (
+            <ActivityIndicator
+              size="small"
+              color={theme.colors.primary}
+              style={{ transform: [{ scale: 0.7 }], width: 14, height: 14 }}
+            />
+          ) : (
+            <Text
+              style={[
+                styles.weatherWidgetTemp,
+                { color: theme.colors.textPrimary },
+              ]}
+            >
+              {meteorologyQuery.data?.temperatura != null
+                ? `${meteorologyQuery.data.temperatura} °C`
+                : "—"}
+            </Text>
+          )}
+          <SymbolView
+            name={{
+              ios: isWeatherExpanded ? "chevron.up" : "chevron.down",
+              android: isWeatherExpanded ? "expand_less" : "expand_more",
+              web: isWeatherExpanded ? "expand_less" : "expand_more",
+            }}
+            size={14}
+            tintColor={theme.colors.textSecondary}
+          />
+        </Pressable>
+
+        {isWeatherExpanded && (
+          <View
+            style={[
+              styles.weatherExpandedCard,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+              },
+            ]}
+          >
+            <View style={styles.weatherExpandedHeader}>
+              <View style={styles.weatherExpandedHeaderLeft}>
+                <Text
+                  style={[
+                    styles.weatherExpandedTemp,
+                    { color: theme.colors.textPrimary },
+                  ]}
+                >
+                  {meteorologyQuery.data?.temperatura != null
+                    ? `${meteorologyQuery.data.temperatura} °C`
+                    : "—"}
+                </Text>
+                <Text
+                  style={[
+                    styles.weatherExpandedDate,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  Condiciones hoy · {todayFormatted}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Cerrar detalle meteorológico"
+                onPress={() => setIsWeatherExpanded(false)}
+                hitSlop={8}
+                style={styles.weatherCloseButton}
+              >
+                <SymbolView
+                  name={{
+                    ios: "xmark",
+                    android: "close",
+                    web: "close",
+                  }}
+                  size={16}
+                  tintColor={theme.colors.textSecondary}
+                />
+              </Pressable>
+            </View>
+
+            {meteorologyQuery.isLoading ? (
+              <View style={styles.weatherLoadingRow}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <Text
+                  style={{
+                    color: theme.colors.textSecondary,
+                    fontSize: 12,
+                  }}
+                >
+                  Consultando condiciones...
+                </Text>
+              </View>
+            ) : meteorologyQuery.isError ? (
+              <Text style={{ color: theme.colors.danger, fontSize: 12 }}>
+                No se pudo obtener la información meteorológica.
+              </Text>
+            ) : meteorologyQuery.data ? (
+              <>
+                <View style={styles.weatherExpandedGrid}>
+                  <WeatherItem
+                    label="Viento"
+                    value={`${
+                      meteorologyQuery.data.velocidad_viento ?? "—"
+                    } km/h`}
+                    detail={
+                      meteorologyQuery.data.direccion_viento ?? "Sin datos"
+                    }
+                  />
+
+                  <WeatherItem
+                    label="Ráfagas"
+                    value={`${meteorologyQuery.data.rafaga ?? "—"} km/h`}
+                  />
+
+                  <WeatherItem
+                    label="Precipitación"
+                    value={`${
+                      meteorologyQuery.data.precipitaciones ?? "—"
+                    } mm`}
+                  />
+
+                  <WeatherItem
+                    label="Humedad"
+                    value={`${meteorologyQuery.data.humedad ?? "—"} %`}
+                  />
+
+                  {meteorologyQuery.data.nieve_fresca != null && (
+                    <WeatherItem
+                      label="Nieve fresca"
+                      value={`${meteorologyQuery.data.nieve_fresca} cm`}
+                    />
+                  )}
+
+                  {meteorologyQuery.data.espesor_nieve != null && (
+                    <WeatherItem
+                      label="Espesor nieve"
+                      value={`${meteorologyQuery.data.espesor_nieve} cm`}
+                    />
+                  )}
+                </View>
+
+                {meteorologyQuery.data.fecha_hora && (
+                  <Text
+                    style={[
+                      styles.weatherExpandedFooter,
+                      { color: theme.colors.textSecondary },
+                    ]}
+                  >
+                    Actualizado:{" "}
+                    {new Date(
+                      meteorologyQuery.data.fecha_hora
+                    ).toLocaleTimeString("es-AR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </Text>
+                )}
+              </>
+            ) : null}
+          </View>
+        )}
       </View>
 
       <SafeAreaView
@@ -387,44 +704,16 @@ export function MapScreen() {
         </Pressable>
       </View>
 
-      <View style={[styles.activityBar, { top: insets.top + 8, backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-        <View style={styles.activityHeader}>
-          <Text style={[styles.activityTitle, { color: theme.colors.textSecondary }]}>ACTIVIDAD</Text>
-          <Pressable disabled={!events.length} accessibilityRole="button" accessibilityLabel="Ver todos los puntos en el mapa" onPress={() => {
-          const longitudes = events.map((event) => event.coordinate[0]);
-          const latitudes = events.map((event) => event.coordinate[1]);
-          setFocusBounds([Math.min(...longitudes) - 0.002, Math.min(...latitudes) - 0.002, Math.max(...longitudes) + 0.002, Math.max(...latitudes) + 0.002]);
-          }} style={({ pressed }) => [styles.activityFit, { backgroundColor: theme.colors.surfaceSecondary, opacity: !events.length ? 0.4 : pressed ? 0.65 : 1 }]}>
-            <SymbolView name={{ ios: 'arrow.up.left.and.arrow.down.right', android: 'fit_screen', web: 'fit_screen' }} size={20} tintColor={theme.colors.primary} />
-          </Pressable>
-        </View>
-        <View style={styles.activityCounts}>
-          {[
-            { label: 'observaciones', count: observationCount, visible: showObservations, query: observationsQuery, color: '#176B91', round: true },
-            { label: 'reportes', count: reportCount, visible: showReports, query: reportsQuery, color: '#A64616', round: false },
-          ].map((item) => <View key={item.label} style={styles.activityItem}>
-            <View style={[styles.activityDot, { backgroundColor: item.color, borderRadius: item.round ? 6 : 2, opacity: item.visible ? 1 : 0.4 }]} />
-            <Text style={[styles.activityLabel, { color: theme.colors.textPrimary }]}>
-              <Text style={styles.activityCount}>{!item.visible ? '—' : item.query.isLoading ? '…' : item.query.isError ? '!' : item.count}</Text>
-              {' '}{item.label}{!item.visible ? ' · oculta' : ''}
-            </Text>
-          </View>)}
-        </View>
-        {((showObservations && observationsQuery.isError) || (showReports && reportsQuery.isError)) &&
-          <Pressable accessibilityRole="button" onPress={() => { void observationsQuery.refetch(); void reportsQuery.refetch(); }}>
-            <Text style={{ color: theme.colors.danger, fontSize: 12, paddingVertical: 8 }}>Error en una capa · Reintentar</Text>
-          </Pressable>}
-        {showTraffic && trafficQuery.data && isAuthenticated && <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
-          Área consultada: {trafficQuery.data.total_personas} personas · {trafficQuery.data.radio_km} km
-        </Text>}
-      </View>
-
       <MapEventSheet event={selectedEvent} onClose={() => setSelectedEventId(null)} />
       <ObservationAreaSheet area={selectedObservationArea} onClose={() => setSelectedObservationAreaId(null)} onEventPress={handleEventPress} />
       <AppBottomSheet
-        visible={selectedArea !== null}
-        onClose={() => setSelectedArea(null)}
+        visible={selectedArea !== null && selectedEventId === null}
+        onClose={() => {
+          setSelectedArea(null);
+          setTrafficLocation(null);
+        }}
         title="Área seleccionada"
+        headerRight={trafficBadge}
       >
         {selectedArea && (
           <View style={styles.areaDetails}>
@@ -432,8 +721,7 @@ export function MapScreen() {
               style={[
                 styles.infoCard,
                 {
-                  backgroundColor:
-                    theme.colors.surfaceSecondary,
+                  backgroundColor: theme.colors.surfaceSecondary,
                 },
               ]}
             >
@@ -443,226 +731,296 @@ export function MapScreen() {
                   { color: theme.colors.textSecondary },
                 ]}
               >
-                Personas en salidas registradas
+                Actividad en 1 km
               </Text>
-              {(!showTraffic || !isAuthenticated) && <Text style={{ color: theme.colors.textSecondary }}>
-                {!isAuthenticated ? 'Iniciá sesión para consultar afluencia.' : 'Activá Afluencia en Capas del mapa para consultar esta área.'}
-              </Text>}
 
-              {trafficQuery.isLoading && (
-                <View style={styles.loadingRow}>
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.primary}
-                  />
-
-                  <Text
-                    style={[
-                      styles.description,
-                      {
-                        color:
-                          theme.colors.textSecondary,
-                      },
-                    ]}
-                  >
-                    Consultando tránsito...
-                  </Text>
-                </View>
-              )}
-
-              {trafficQuery.isError && (
-                <Text
+              <View style={styles.categoryRow}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Observaciones: ${nearbyEvents.observations.length} en 1 km`}
+                  onPress={() => setActivityCategory('observation')}
                   style={[
-                    styles.description,
-                    { color: theme.colors.danger },
+                    styles.categoryChip,
+                    activityCategory === 'observation'
+                      ? {
+                          backgroundColor: theme.colors.primary,
+                          borderColor: theme.colors.primary,
+                        }
+                      : {
+                          backgroundColor: theme.colors.surface,
+                          borderColor: theme.colors.border,
+                        },
                   ]}
                 >
-                  No se pudo obtener la información de
-                  tránsito.
-                </Text>
-              )}
-
-              {showTraffic && isAuthenticated && trafficQuery.isSuccess && (
-                <>
+                  <View
+                    style={[
+                      styles.categoryDot,
+                      {
+                        backgroundColor:
+                          activityCategory === 'observation'
+                            ? theme.colors.textInverse
+                            : '#176B91',
+                      },
+                    ]}
+                  />
                   <Text
                     style={[
-                      styles.trafficValue,
+                      styles.categoryChipText,
                       {
                         color:
-                          theme.colors.textPrimary,
+                          activityCategory === 'observation'
+                            ? theme.colors.textInverse
+                            : theme.colors.textPrimary,
+                        fontWeight:
+                          activityCategory === 'observation' ? '700' : '500',
                       },
                     ]}
                   >
-                    {trafficQuery.data.total_personas}
+                    Observaciones ({nearbyEvents.observations.length})
                   </Text>
+                </Pressable>
 
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Reportes: ${nearbyEvents.reports.length} en 1 km`}
+                  onPress={() => setActivityCategory('report')}
+                  style={[
+                    styles.categoryChip,
+                    activityCategory === 'report'
+                      ? {
+                          backgroundColor: theme.colors.primary,
+                          borderColor: theme.colors.primary,
+                        }
+                      : {
+                          backgroundColor: theme.colors.surface,
+                          borderColor: theme.colors.border,
+                        },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.categoryDot,
+                      {
+                        backgroundColor:
+                          activityCategory === 'report'
+                            ? theme.colors.textInverse
+                            : '#A64616',
+                        borderRadius: 2,
+                      },
+                    ]}
+                  />
                   <Text
                     style={[
-                      styles.description,
+                      styles.categoryChipText,
                       {
                         color:
-                          theme.colors.textSecondary,
+                          activityCategory === 'report'
+                            ? theme.colors.textInverse
+                            : theme.colors.textPrimary,
+                        fontWeight:
+                          activityCategory === 'report' ? '700' : '500',
                       },
                     ]}
                   >
-                    Personas asociadas a salidas en curso
-                    dentro de un radio de{" "}
-                    {trafficQuery.data.radio_km} km.
+                    Reportes ({nearbyEvents.reports.length})
                   </Text>
-                </>
+                </Pressable>
+              </View>
+
+              {activeCategoryItems.length === 0 ? (
+                <View style={styles.emptyActivityContainer}>
+                  <Text
+                    style={[
+                      styles.emptyActivityText,
+                      { color: theme.colors.textSecondary },
+                    ]}
+                  >
+                    {activityCategory === 'observation'
+                      ? 'No hay observaciones de campo en este radio de 1 km.'
+                      : 'No hay reportes técnicos en este radio de 1 km.'}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.activityItemList}>
+                  {activeCategoryItems.map((item) => (
+                    <Pressable
+                      key={item.id}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Ver detalle de ${item.title}`}
+                      onPress={() => setSelectedEventId(item.id)}
+                      style={({ pressed }) => [
+                        styles.activityItemRow,
+                        {
+                          backgroundColor: theme.colors.surface,
+                          borderColor: theme.colors.border,
+                          opacity: pressed ? 0.75 : 1,
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.activityItemDot,
+                          {
+                            backgroundColor: item.color,
+                            borderRadius: item.kind === 'observation' ? 6 : 2,
+                          },
+                        ]}
+                      />
+                      <View style={styles.activityItemTextContainer}>
+                        <Text
+                          style={[
+                            styles.activityItemTitle,
+                            { color: theme.colors.textPrimary },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {item.title}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.activityItemSubtitle,
+                            { color: theme.colors.textSecondary },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {item.author || 'Autor no informado'}
+                          {' · '}
+                          {new Date(item.date).toLocaleDateString('es-AR')}
+                          {item.level ? ` · ${item.level}` : ''}
+                        </Text>
+                      </View>
+                      <SymbolView
+                        name={{
+                          ios: 'chevron.right',
+                          android: 'chevron_right',
+                          web: 'chevron_right',
+                        }}
+                        size={16}
+                        tintColor={theme.colors.textSecondary}
+                      />
+                    </Pressable>
+                  ))}
+                </View>
               )}
             </View>
 
-            <View
-              style={[
-                styles.infoCard,
-                {
-                  backgroundColor:
-                    theme.colors.surfaceSecondary,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: theme.colors.textSecondary },
+            {/* Acciones sobre el área seleccionada */}
+            <View style={styles.modalActionsContainer}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Nueva observación en este punto"
+                onPress={() => {
+                  if (!isAuthenticated) {
+                    setSelectedArea(null);
+                    setTrafficLocation(null);
+                    setShowReportLogin(true);
+                    return;
+                  }
+                  const lat = selectedArea.latitude;
+                  const lon = selectedArea.longitude;
+                  setSelectedArea(null);
+                  setTrafficLocation(null);
+                  router.push({
+                    pathname: "/(tabs)/mapa/observacion/cargar-observacion",
+                    params: {
+                      lat: lat.toString(),
+                      lon: lon.toString(),
+                    },
+                  } as never);
+                }}
+                style={({ pressed }) => [
+                  styles.modalActionButton,
+                  { backgroundColor: theme.colors.primary },
+                  pressed && styles.pressed,
                 ]}
               >
-                Condiciones meteorológicas
-              </Text>
-
-              {meteorologyQuery.isLoading && (
-                <View style={styles.loadingRow}>
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.primary}
-                  />
-
-                  <Text
-                    style={[
-                      styles.description,
-                      {
-                        color:
-                          theme.colors.textSecondary,
-                      },
-                    ]}
-                  >
-                    Consultando condiciones
-                    meteorológicas...
-                  </Text>
-                </View>
-              )}
-
-              {meteorologyQuery.isError && (
+                <SymbolView
+                  name={{
+                    ios: "binoculars.fill",
+                    android: "visibility",
+                    web: "visibility",
+                  }}
+                  size={18}
+                  tintColor={theme.colors.textInverse}
+                />
                 <Text
                   style={[
-                    styles.description,
-                    { color: theme.colors.danger },
+                    styles.modalActionButtonText,
+                    { color: theme.colors.textInverse },
                   ]}
                 >
-                  No se pudo obtener la información
-                  meteorológica.
+                  Nueva observación
                 </Text>
-              )}
+              </Pressable>
 
-              {meteorologyQuery.isSuccess && (
-                <>
-                  <View style={styles.weatherMain}>
-                    <Text
-                      style={[
-                        styles.weatherTemperature,
-                        {
-                          color:
-                            theme.colors.textPrimary,
-                        },
-                      ]}
-                    >
-                      {meteorologyQuery.data.temperatura !=
-                      null
-                        ? `${meteorologyQuery.data.temperatura} °C`
-                        : "—"}
-                    </Text>
-
-                    <Text
-                      style={[
-                        styles.weatherDescription,
-                        {
-                          color:
-                            theme.colors.textSecondary,
-                        },
-                      ]}
-                    >
-                      Temperatura actual
-                    </Text>
-                  </View>
-
-                  <View style={styles.weatherGrid}>
-                    <WeatherItem
-                      label="Viento"
-                      value={`${
-                        meteorologyQuery.data
-                          .velocidad_viento ?? "—"
-                      } km/h`}
-                      detail={
-                        meteorologyQuery.data
-                          .direccion_viento ?? "Sin datos"
-                      }
-                    />
-
-                    <WeatherItem
-                      label="Ráfagas"
-                      value={`${
-                        meteorologyQuery.data.rafaga ?? "—"
-                      } km/h`}
-                    />
-
-                    <WeatherItem
-                      label="Precipitaciones"
-                      value={`${
-                        meteorologyQuery.data
-                          .precipitaciones ?? "—"
-                      } mm`}
-                    />
-
-                    <WeatherItem
-                      label="Humedad"
-                      value={`${
-                        meteorologyQuery.data.humedad ?? "—"
-                      } %`}
-                    />
-
-                    <WeatherItem
-                      label="Nieve fresca"
-                      value={`${
-                        meteorologyQuery.data
-                          .nieve_fresca ?? "—"
-                      } cm`}
-                    />
-
-                    <WeatherItem
-                      label="Espesor de nieve"
-                      value={`${
-                        meteorologyQuery.data
-                          .espesor_nieve ?? "—"
-                      } cm`}
-                    />
-                  </View>
-
+              {hasRole(["observador_experto", "administrador"]) && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Nuevo reporte de análisis en este punto"
+                  onPress={() => {
+                    const lat = selectedArea.latitude;
+                    const lon = selectedArea.longitude;
+                    const meteo = meteorologyQuery.data;
+                    setSelectedArea(null);
+                    setTrafficLocation(null);
+                    router.push({
+                      pathname: "/(tabs)/mapa/analisis/cargar-analisis",
+                      params: {
+                        lat: lat.toString(),
+                        lon: lon.toString(),
+                        ...(meteo
+                          ? {
+                              meteoId: meteo.id.toString(),
+                              temp:
+                                meteo.temperatura != null
+                                  ? meteo.temperatura.toString()
+                                  : undefined,
+                              windSpeed:
+                                meteo.velocidad_viento != null
+                                  ? meteo.velocidad_viento.toString()
+                                  : undefined,
+                              windDir: meteo.direccion_viento ?? undefined,
+                              snowDepth:
+                                meteo.espesor_nieve != null
+                                  ? meteo.espesor_nieve.toString()
+                                  : undefined,
+                              freshSnow:
+                                meteo.nieve_fresca != null
+                                  ? meteo.nieve_fresca.toString()
+                                  : undefined,
+                            }
+                          : {}),
+                      },
+                    } as never);
+                  }}
+                  style={({ pressed }) => [
+                    styles.modalActionButton,
+                    {
+                      backgroundColor: theme.colors.surfaceSecondary,
+                      borderColor: theme.colors.border,
+                      borderWidth: 1,
+                    },
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <SymbolView
+                    name={{
+                      ios: "doc.badge.plus",
+                      android: "post_add",
+                      web: "post_add",
+                    }}
+                    size={18}
+                    tintColor={theme.colors.primary}
+                  />
                   <Text
                     style={[
-                      styles.weatherUpdated,
-                      {
-                        color:
-                          theme.colors.textSecondary,
-                      },
+                      styles.modalActionButtonText,
+                      { color: theme.colors.textPrimary },
                     ]}
                   >
-                    Actualizado:{" "}
-                    {new Date(
-                      meteorologyQuery.data.fecha_hora,
-                    ).toLocaleString("es-AR")}
+                    Nuevo reporte
                   </Text>
-                </>
+                </Pressable>
               )}
             </View>
           </View>
@@ -908,20 +1266,6 @@ function WeatherItem({
 }
 
 const styles = StyleSheet.create({
-  activityBar: {
-    position: 'absolute', left: 12, right: 76, maxWidth: 380,
-    borderRadius: 20, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 10,
-    shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 14,
-    shadowOffset: { width: 0, height: 5 }, elevation: 4,
-  },
-  activityHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  activityTitle: { fontSize: 10, fontWeight: '700', letterSpacing: 1.6 },
-  activityFit: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  activityCounts: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 18, rowGap: 8, paddingBottom: 6 },
-  activityItem: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  activityDot: { width: 10, height: 10 },
-  activityLabel: { fontSize: 12 },
-  activityCount: { fontSize: 19, fontWeight: '700', fontVariant: ['tabular-nums'] },
   screen: {
     flex: 1,
     overflow: "hidden",
@@ -1080,9 +1424,90 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
 
-  trafficValue: {
-    fontSize: 30,
-    fontWeight: "800",
+  trafficBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+
+  trafficBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  categoryRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 6,
+  },
+
+  categoryChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 18,
+    borderWidth: 1,
+  },
+
+  categoryDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+
+  categoryChipText: {
+    fontSize: 13,
+  },
+
+  emptyActivityContainer: {
+    paddingVertical: 8,
+    paddingHorizontal: 2,
+  },
+
+  emptyActivityText: {
+    fontSize: 13,
+    fontStyle: "italic",
+  },
+
+  activityItemList: {
+    gap: 6,
+    marginTop: 2,
+  },
+
+  activityItemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+
+  activityItemDot: {
+    width: 10,
+    height: 10,
+  },
+
+  activityItemTextContainer: {
+    flex: 1,
+  },
+
+  activityItemTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  activityItemSubtitle: {
+    fontSize: 11,
+    marginTop: 2,
   },
 
   weatherMain: {
@@ -1179,6 +1604,114 @@ const styles = StyleSheet.create({
   },
 
   noticeActionText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  weatherWidgetContainer: {
+    position: "absolute",
+    left: 12,
+    zIndex: 4,
+    maxWidth: 290,
+  },
+
+  weatherWidgetPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOpacity: 0.14,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+
+  weatherWidgetDate: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  weatherWidgetTemp: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  weatherExpandedCard: {
+    marginTop: 8,
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 6,
+  },
+
+  weatherExpandedHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  weatherExpandedHeaderLeft: {
+    gap: 2,
+  },
+
+  weatherExpandedTemp: {
+    fontSize: 24,
+    fontWeight: "800",
+  },
+
+  weatherExpandedDate: {
+    fontSize: 12,
+  },
+
+  weatherCloseButton: {
+    padding: 6,
+    borderRadius: 12,
+  },
+
+  weatherLoadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+  },
+
+  weatherExpandedGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+
+  weatherExpandedFooter: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+
+  modalActionsContainer: {
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+
+  modalActionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+
+  modalActionButtonText: {
     fontSize: 14,
     fontWeight: "700",
   },

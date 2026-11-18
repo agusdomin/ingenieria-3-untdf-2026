@@ -7,7 +7,7 @@ import { AppBottomSheet } from "../../components/dialogs/AppBottomSheet";
 import { WizardHeader } from "../../components/navigation/WizardHeader";
 import { MapContainer } from "../../components/map/MapContainer";
 import { useTheme } from "../../theme/useTheme";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { ConfirmationView } from "../../components/feedback/ConfirmationView";
 
 type Coordinate = [number, number];
@@ -40,6 +40,11 @@ const relevanceOptions = [
 export function NewObservationScreen() {
   const { theme } = useTheme();
   const router = useRouter();
+  const params = useLocalSearchParams<{ lat?: string; lon?: string }>();
+  const initialCoordinate: Coordinate | null =
+    params.lat && params.lon
+      ? [parseFloat(params.lon), parseFloat(params.lat)]
+      : null;
   const { mutateAsync: createObservation } = useCreateObservation();
   const [currentStep, setCurrentStep] = useState(1);
   const [isConfirmed, setIsConfirmed] = useState(false);
@@ -50,7 +55,7 @@ export function NewObservationScreen() {
   const [relevance, setRelevance] = useState<string | null>("informativa");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [coordinate, setCoordinate] = useState<Coordinate | null>(null);
+  const [coordinate, setCoordinate] = useState<Coordinate | null>(initialCoordinate);
   const [imageUri, setImageUri] = useState<string | null>(null);
 
   const handleMapPress = useCallback((coordinates: Coordinate) => {
