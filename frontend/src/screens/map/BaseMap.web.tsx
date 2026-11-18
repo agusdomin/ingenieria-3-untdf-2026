@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Map as LeafletMap, TileLayer } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { binocularsSvg } from '../../components/map/markerIcons';
 
 import { useTheme } from '../../theme/useTheme';
 import {
@@ -20,6 +21,9 @@ export function BaseMap({
   onError,
   onMapPress,
   onCameraChange,
+  events,
+  onEventPress,
+  trafficArea,
 }: MapContainerProps) {
   const { theme } = useTheme();
 
@@ -29,6 +33,31 @@ export function BaseMap({
 
   const [error, setError] = useState(false);
   const [mapVersion, setMapVersion] = useState(0);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    let disposed = false;
+    let group: import('leaflet').LayerGroup | undefined;
+    void import('leaflet').then((L) => {
+      if (disposed) return;
+      group = L.layerGroup().addTo(map);
+      if (trafficArea) {
+        L.circle([trafficArea.coordenadas.latitud, trafficArea.coordenadas.longitud], {
+          radius: trafficArea.radio_km * 1000, color: '#7254A3', fillOpacity: 0.12, interactive: false,
+        }).bindTooltip(`${trafficArea.total_personas} personas en salidas · ${trafficArea.radio_km} km`, { permanent: true }).addTo(group);
+      }
+      for (const item of events ?? []) {
+        const label = document.createElement('span');
+        label.textContent = item.title;
+        const icon = L.divIcon({ className: '', iconSize: [32, 32], iconAnchor: [16, 16],
+          html: `<span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:2px solid white;border-radius:${item.kind === 'report' ? '5px' : '50%'};background:${item.color};color:white;font:bold 15px sans-serif">${item.kind === 'report' ? 'R' : binocularsSvg}</span>` });
+        L.marker([item.coordinate[1], item.coordinate[0]], { icon, title: item.title, bubblingMouseEvents: false })
+          .bindTooltip(label).on('click', () => onEventPress?.(item.id)).addTo(group);
+      }
+    }).catch(() => { if (!disposed) setError(true); });
+    return () => { disposed = true; group?.remove(); };
+  }, [events, onEventPress, trafficArea, mapVersion]);
 
   useEffect(() => {
     const position = zoomPositionRef.current;

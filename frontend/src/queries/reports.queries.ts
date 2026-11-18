@@ -13,13 +13,14 @@ import {
   } from '../services/reports.service';
   
   export const useReports =
-    () => {
+    (enabled = true) => {
       return useQuery({
         queryKey:
           queryKeys.reports.all,
   
         queryFn:
           getReports,
+      enabled,
       });
     };
   

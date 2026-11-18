@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { createObservation } from "../../services/observations.service";
+import { useCreateObservation } from '../../queries/observations.queries';
 import { AppImagePicker, AppSelect, AppTextArea } from "../../components/forms";
 import { AppBottomSheet } from "../../components/dialogs/AppBottomSheet";
 import { WizardHeader } from "../../components/navigation/WizardHeader";
@@ -40,6 +40,7 @@ const relevanceOptions = [
 export function NewObservationScreen() {
   const { theme } = useTheme();
   const router = useRouter();
+  const { mutateAsync: createObservation } = useCreateObservation();
   const [currentStep, setCurrentStep] = useState(1);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [showExit, setShowExit] = useState(false);

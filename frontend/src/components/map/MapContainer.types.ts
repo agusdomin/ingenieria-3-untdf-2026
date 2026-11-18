@@ -1,10 +1,15 @@
 import type { ReactNode } from "react";
+import type { MapEvent } from './mapEvents';
+import type { TrafficByAreaResponse } from '../../types/outing';
 import type { ZoneMapProps } from "../../screens/map/zoneMap.types";
 
 export const INITIAL_CENTER: [number, number] = [-68.3, -54.81];
 export const INITIAL_ZOOM = 11;
 
 export interface MapContainerProps extends ZoneMapProps {
+  events?: MapEvent[];
+  onEventPress?: (id: string) => void;
+  trafficArea?: TrafficByAreaResponse | null;
   showRiskZones?: boolean;
   zoomControlBottom?: number;
   focusBounds?: [number, number, number, number];

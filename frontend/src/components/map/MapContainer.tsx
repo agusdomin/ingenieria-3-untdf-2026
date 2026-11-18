@@ -5,5 +5,5 @@ import type { MapContainerProps } from './MapContainer.types';
 
 export const MapContainer: ComponentType<MapContainerProps> =
   isRunningInExpoGo()
-    ? require('./MapContainer.web').MapContainer
+    ? require('./MapContainerGo').MapContainerGo
     : require('./MapContainerNative').MapContainerNative;

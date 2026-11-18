@@ -15,9 +15,10 @@ import { AuthForm } from './AuthForm';
 interface LoginGateModalProps {
   visible: boolean;
   onDismiss: () => void;
+  onSuccess?: () => void;
 }
 
-export function LoginGateModal({ visible, onDismiss }: LoginGateModalProps) {
+export function LoginGateModal({ visible, onDismiss, onSuccess }: LoginGateModalProps) {
   const { theme } = useTheme();
 
   return (
@@ -58,7 +59,7 @@ export function LoginGateModal({ visible, onDismiss }: LoginGateModalProps) {
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.scrollContent}
           >
-            <AuthForm onGuest={onDismiss} onSuccess={onDismiss} />
+            <AuthForm onGuest={onDismiss} onSuccess={onSuccess ?? onDismiss} />
           </ScrollView>
         </View>
       </KeyboardAvoidingView>

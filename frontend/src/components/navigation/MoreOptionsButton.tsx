@@ -10,16 +10,19 @@ import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
 
 import { useTheme } from "../../theme/useTheme";
+import { useAuth } from '../../contexts/AuthContext';
 
-export function MoreOptionsButton() {
+export function MoreOptionsButton({ onAccountPress }: { onAccountPress?: () => void }) {
   const { theme } = useTheme();
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
 
   const [open, setOpen] = useState(false);
 
   const goToUser = () => {
     setOpen(false);
-    router.push("/(tabs)/usuario" as never);
+    if (onAccountPress) onAccountPress();
+    else router.push("/(tabs)/usuario" as never);
   };
 
   const goToOffline = () => {
@@ -87,6 +90,7 @@ export function MoreOptionsButton() {
 
             <Pressable
               onPress={goToUser}
+              accessibilityRole="button"
               style={({ pressed }) => [
                 styles.option,
                 pressed && styles.pressed,
@@ -109,7 +113,7 @@ export function MoreOptionsButton() {
                     { color: theme.colors.textPrimary },
                   ]}
                 >
-                  Usuario
+                  {isAuthenticated ? 'Mi cuenta' : 'Ingresar / Crear cuenta'}
                 </Text>
 
                 <Text

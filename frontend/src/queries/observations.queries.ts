@@ -11,10 +11,11 @@ import {
   getObservations,
 } from '../services/observations.service';
 
-export const useObservations = () => {
+export const useObservations = (enabled = true) => {
   return useQuery({
     queryKey: queryKeys.observations.all,
     queryFn: getObservations,
+    enabled,
   });
 };
 
@@ -24,8 +25,12 @@ export const useCreateObservation = () => {
   return useMutation({
     mutationFn: createObservation,
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onSuccess: (observation) => {
+      queryClient.setQueryData<import('../types/observation').Observation[]>(
+        queryKeys.observations.all,
+        (current) => current ? [observation, ...current.filter((item) => item.id !== observation.id)] : undefined,
+      );
+      return queryClient.invalidateQueries({
         queryKey: queryKeys.observations.all,
       });
     },

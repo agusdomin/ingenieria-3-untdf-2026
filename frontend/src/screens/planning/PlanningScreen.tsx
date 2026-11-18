@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -53,6 +52,8 @@ export function PlanningScreen() {
     "location" | "schedule" | "group" | "review" | null
   >(null);
   const [showErrors, setShowErrors] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveConfirmation, setSaveConfirmation] = useState<string | null>(null);
 
   const invalidDates = returnDate <= departure;
   const primaryText = { color: theme.colors.textPrimary };
@@ -63,11 +64,15 @@ export function PlanningScreen() {
   };
 
   function handleCreateOuting() {
+    if (createOutingMutation.isPending) return;
+    setSaveError(null);
+    setSaveConfirmation(null);
     if (!coordinates) {
-      Alert.alert(
-        "Ubicación requerida",
-        "Seleccioná una ubicación para planificar la salida.",
-      );
+      setSaveError('Seleccioná una ubicación para planificar la salida.');
+      return;
+    }
+    if (invalidDates) {
+      setSaveError('El regreso debe ser posterior a la salida.');
       return;
     }
 
@@ -88,19 +93,13 @@ export function PlanningScreen() {
 
       {
         onSuccess: () => {
-          Alert.alert(
-            "Salida registrada",
-            "Tu planificación se guardó correctamente.",
-          );
+          setSaveConfirmation(`Salida registrada: ${companions + 1} personas. Se contabiliza en el mapa durante el horario de la salida, dentro de un radio de 500 m de la ubicación seleccionada.`);
 
           reset();
         },
 
         onError: () => {
-          Alert.alert(
-            "No se pudo registrar",
-            "Verificá tu conexión y que hayas iniciado sesión para registrar una salida.",
-          );
+          setSaveError('No se pudo registrar. Verificá tu conexión y que hayas iniciado sesión para registrar una salida.');
         },
       },
     );
@@ -139,6 +138,12 @@ export function PlanningScreen() {
         <MoreOptionsButton />
       </View>
       <ScrollView contentContainerStyle={styles.content}>
+        {saveConfirmation && <View style={[styles.card, surface]}>
+          <Text accessibilityRole="alert" style={primaryText}>{saveConfirmation}</Text>
+          <Pressable accessibilityRole="button" onPress={() => setSaveConfirmation(null)} style={{ paddingVertical: 10 }}>
+            <Text style={{ color: theme.colors.primary }}>Entendido</Text>
+          </Pressable>
+        </View>}
         <View style={[styles.card, surface]}>
           <Text style={[styles.sectionTitle, primaryText]}>
             Declaración de itinerario
@@ -518,8 +523,9 @@ export function PlanningScreen() {
                   </Text>
                   <Text style={[styles.noticeText, secondaryText]}>
                     Las salidas se registran en el sistema. Solo se contabilizan
-                    en el mapa cuando se encuentran en curso..
+                    en el mapa cuando se encuentran en curso.
                   </Text>
+                  {saveError && <Text accessibilityRole="alert" style={{ color: theme.colors.danger }}>{saveError}</Text>}
 
                   <Pressable
                     accessibilityRole="button"

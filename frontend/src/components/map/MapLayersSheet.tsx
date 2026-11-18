@@ -10,6 +10,7 @@ interface Props {
   onMapStyleChange: (style: MapContainerProps['mapStyle']) => void;
   showRiskZones?: boolean;
   onRiskZonesChange?: (visible: boolean) => void;
+  layers?: { id: string; label: string; detail: string; visible: boolean; onChange: (value: boolean) => void }[];
 }
 
 const bases = [
@@ -17,7 +18,7 @@ const bases = [
   { value: 'street', label: 'Estándar / Callejero', detail: 'Calles y caminos · OpenStreetMap' },
 ] as const;
 
-export function MapLayersSheet({ visible, onClose, mapStyle, onMapStyleChange, showRiskZones, onRiskZonesChange }: Props) {
+export function MapLayersSheet({ visible, onClose, mapStyle, onMapStyleChange, showRiskZones, onRiskZonesChange, layers = [] }: Props) {
   const { theme } = useTheme();
   return (
     <AppBottomSheet visible={visible} onClose={onClose} title="Capas del mapa">
@@ -49,6 +50,19 @@ export function MapLayersSheet({ visible, onClose, mapStyle, onMapStyleChange, s
             );
           })}
         </View>
+        {layers.length > 0 && <View style={styles.section}>
+          <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>Información del mapa</Text>
+          {layers.map((layer) => <View key={layer.id} style={[styles.option, { borderColor: theme.colors.border }]}>
+            <View style={styles.copy}>
+              <Text style={[styles.label, { color: theme.colors.textPrimary }]}>{layer.label}</Text>
+              <Text accessibilityLiveRegion="polite" style={[styles.detail, { color: theme.colors.textSecondary }]}>
+                {layer.visible ? 'Visible' : 'Oculta'} · {layer.detail}
+              </Text>
+            </View>
+            <Switch accessibilityLabel={layer.label} value={layer.visible} onValueChange={layer.onChange}
+              trackColor={{ true: theme.colors.primary, false: theme.colors.border }} />
+          </View>)}
+        </View>}
         {onRiskZonesChange ? <View style={styles.section}>
           <Text style={[theme.typography.body, styles.heading, { color: theme.colors.textPrimary }]}>Información del mapa</Text>
           <View style={[styles.option, { borderColor: theme.colors.border }]}>

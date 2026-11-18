@@ -5,10 +5,13 @@ import {
   GeoJSONSource,
   Layer,
   Map,
+  ViewAnnotation,
   type CameraRef,
   type StyleSpecification,
 } from "@maplibre/maplibre-react-native";
 import { useTheme } from "../../theme/useTheme";
+import { circle } from '@turf/turf';
+import { SymbolView } from 'expo-symbols';
 import { EMPTY_ZONES, ignoreZonePress } from "../../screens/map/zoneMap.types";
 import { RiskPolygonLayer } from "./RiskPolygonLayer";
 import { LocationControl } from "./LocationControl";
@@ -35,6 +38,9 @@ export function MapContainerNative({
   onCameraChange,
   onLocate,
   locating,
+  events,
+  onEventPress,
+  trafficArea,
 }: MapContainerProps) {
   const { theme } = useTheme();
   const camera = useRef<CameraRef>(null);
@@ -45,6 +51,7 @@ export function MapContainerNative({
   const style = useMemo<StyleSpecification>(
     () => ({
       version: 8,
+      glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
       sources: {
         base: {
           type: "raster",
@@ -129,6 +136,34 @@ export function MapContainerNative({
         {showRiskZones ? (
           <RiskPolygonLayer zones={data} onSelectZone={onZonePress} />
         ) : null}
+        {trafficArea && <GeoJSONSource id="traffic-area" data={circle(
+          [trafficArea.coordenadas.longitud, trafficArea.coordenadas.latitud], trafficArea.radio_km,
+        )}>
+          <Layer id="traffic-fill" type="fill" paint={{ 'fill-color': '#7254A3', 'fill-opacity': 0.12 }} />
+          <Layer id="traffic-line" type="line" paint={{ 'line-color': '#7254A3', 'line-width': 2 }} />
+        </GeoJSONSource>}
+        {events?.filter((item) => item.kind === 'observation').map((item) => (
+          <ViewAnnotation key={item.id} id={item.id} lngLat={item.coordinate} onPress={(event) => {
+            event.stopPropagation();
+            onEventPress?.(item.id);
+          }}>
+            <View collapsable={false} accessible accessibilityRole="button" accessibilityLabel={item.title}
+              style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: '#FFFFFF', backgroundColor: item.color, alignItems: 'center', justifyContent: 'center' }}>
+              <SymbolView name={{ ios: 'binoculars.fill', android: 'visibility', web: 'visibility' }} size={20} tintColor="#FFFFFF" />
+            </View>
+          </ViewAnnotation>
+        ))}
+        {!!events?.some((item) => item.kind === 'report') && <GeoJSONSource id="map-events" data={{ type: 'FeatureCollection', features: events.filter((item) => item.kind === 'report').map((item) => ({
+          type: 'Feature', geometry: { type: 'Point', coordinates: item.coordinate },
+          properties: { id: item.id, color: item.color, label: item.kind === 'report' ? 'R' : 'O' },
+        })) }} onPress={(event) => {
+          event.stopPropagation();
+          const id = event.nativeEvent.features[0]?.properties?.id;
+          if (typeof id === 'string') onEventPress?.(id);
+        }}>
+          <Layer id="event-dots" type="circle" paint={{ 'circle-radius': 14, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 2 }} />
+          <Layer id="event-labels" type="symbol" layout={{ 'text-field': ['get', 'label'], 'text-font': ['Open Sans Regular'], 'text-size': 14, 'text-allow-overlap': true }} paint={{ 'text-color': '#FFFFFF' }} />
+        </GeoJSONSource>}
         {userLocation && (
           <GeoJSONSource
             id="user-location"

@@ -15,6 +15,7 @@ export interface Observation {
   descripcion: string | null;
 
   foto_url: string | null;
+  imagen?: string | null;
 
   fecha_hora: string;
 

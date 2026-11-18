@@ -20,8 +20,14 @@ import {
 } from "react-native-safe-area-context";
 
 import { MapAccountModal } from "../../components/auth/MapAccountModal";
+import { LoginGateModal } from '../../components/auth/LoginGateModal';
 import { MapContainer } from "../../components/map/MapContainer";
 import { MapLayersSheet } from "../../components/map/MapLayersSheet";
+import { MapEventSheet } from '../../components/map/MapEventSheet';
+import { mapEvents } from '../../components/map/mapEvents';
+import { useObservations } from '../../queries/observations.queries';
+import { useReports } from '../../queries/reports.queries';
+import { useAuth } from '../../contexts/AuthContext';
 import { MoreOptionsButton } from "../../components/navigation/MoreOptionsButton";
 
 import { useLocation } from "../../hooks/useLocation";
@@ -39,6 +45,24 @@ export function MapScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isAuthenticated } = useAuth();
+  const observationsQuery = useObservations();
+  const reportsQuery = useReports();
+  const [showObservations, setShowObservations] = useState(true);
+  const [showReports, setShowReports] = useState(true);
+  const [showTraffic, setShowTraffic] = useState(true);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const allEvents = useMemo(() => mapEvents(
+    observationsQuery.data ?? [], reportsQuery.data ?? [],
+  ), [observationsQuery.data, reportsQuery.data]);
+  const events = useMemo(() => allEvents.filter((event) =>
+    event.kind === 'observation' ? showObservations : showReports,
+  ), [allEvents, showObservations, showReports]);
+  const observationCount = allEvents.filter((event) => event.kind === 'observation').length;
+  const reportCount = allEvents.length - observationCount;
+  const observationStatus = layerStatus(observationsQuery, observationCount);
+  const reportStatus = layerStatus(reportsQuery, reportCount);
+  const selectedEvent = events.find((event) => event.id === selectedEventId) ?? null;
 
   const [focusBounds, setFocusBounds] =
     useState<[number, number, number, number]>();
@@ -48,6 +72,7 @@ export function MapScreen() {
 
   const [showLayers, setShowLayers] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
+  const [showReportLogin, setShowReportLogin] = useState(false);
 
   const {
     latitude,
@@ -59,6 +84,12 @@ export function MapScreen() {
   } = useLocation();
   const [selectedArea, setSelectedArea] =
   useState<SelectedArea | null>(null);
+  const [trafficLocation, setTrafficLocation] = useState<SelectedArea | null>(null);
+  const handleEventPress = useCallback((id: string) => {
+    Keyboard.dismiss();
+    setSelectedArea(null);
+    setSelectedEventId(id);
+  }, []);
   const [locationNoticeDismissed, setLocationNoticeDismissed] = useState(false);
   const [mapResetVersion, setMapResetVersion] = useState(0);
   const [bottomControlsHeight, setBottomControlsHeight] = useState(54);
@@ -84,11 +115,11 @@ export function MapScreen() {
     useState(false);
 
   const trafficQuery = useTrafficByArea(
-    selectedArea
+    trafficLocation && showTraffic && isAuthenticated
       ? {
-          latitude: selectedArea.latitude,
-          longitude: selectedArea.longitude,
-          radiusKm: selectedArea.radius / 1000,
+          latitude: trafficLocation.latitude,
+          longitude: trafficLocation.longitude,
+          radiusKm: trafficLocation.radius / 1000,
         }
       : null,
   );
@@ -107,6 +138,8 @@ export function MapScreen() {
       const [longitude, latitude] = coordinate;
 
       Keyboard.dismiss();
+      setSelectedEventId(null);
+      setTrafficLocation({ latitude, longitude, radius: 500 });
 
       setSelectedArea({
         latitude,
@@ -141,6 +174,9 @@ export function MapScreen() {
           focusBounds={focusBounds}
           mapStyle={mapStyle}
           showRiskZones={false}
+          events={events}
+          onEventPress={handleEventPress}
+          trafficArea={showTraffic && isAuthenticated ? trafficQuery.data : null}
           onMapPress={handleMapPress}
           userLocation={userLocation}
           zoomControlTop={insets.top + 64}
@@ -149,9 +185,9 @@ export function MapScreen() {
       </View>
 
       <SafeAreaView
-        edges={["top"]}
+        edges={[]}
         pointerEvents="box-none"
-        style={styles.overlay}
+        style={[styles.overlay, { top: insets.top + 8 }]}
       >
         <Pressable
           accessibilityLabel="Aviso de seguridad"
@@ -173,7 +209,7 @@ export function MapScreen() {
           />
         </Pressable>
 
-        <MoreOptionsButton />
+        <MoreOptionsButton onAccountPress={() => setShowAccount(true)} />
       </SafeAreaView>
 
       <View
@@ -182,20 +218,6 @@ export function MapScreen() {
           { bottom: zoomControlBottom + 114 },
         ]}
       >
-        <MapControl
-          label="Mi cuenta"
-          icon={{
-            ios: "person.crop.circle",
-            android: "account_circle",
-            web: "account_circle",
-          }}
-          active={showAccount}
-          onPress={() => {
-            Keyboard.dismiss();
-            setShowAccount(true);
-          }}
-        />
-
         <MapControl
           label="Capas del mapa"
           icon={{
@@ -313,11 +335,14 @@ export function MapScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Crear reporte"
-          onPress={() =>
-            router.push(
-              "/(tabs)/mapa/observacion/cargar-observacion" as never,
-            )
-          }
+          onPress={() => {
+            if (!isAuthenticated) {
+              Keyboard.dismiss();
+              setShowReportLogin(true);
+              return;
+            }
+            router.push("/(tabs)/mapa/observacion/cargar-observacion" as never);
+          }}
           style={({ pressed }) => [
             styles.reportButton,
             { backgroundColor: theme.colors.primary },
@@ -345,6 +370,39 @@ export function MapScreen() {
         </Pressable>
       </View>
 
+      <View style={[styles.activityBar, { top: insets.top + 8, backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+        <View style={styles.activityHeader}>
+          <Text style={[styles.activityTitle, { color: theme.colors.textSecondary }]}>ACTIVIDAD</Text>
+          <Pressable disabled={!events.length} accessibilityRole="button" accessibilityLabel="Ver todos los puntos en el mapa" onPress={() => {
+          const longitudes = events.map((event) => event.coordinate[0]);
+          const latitudes = events.map((event) => event.coordinate[1]);
+          setFocusBounds([Math.min(...longitudes) - 0.002, Math.min(...latitudes) - 0.002, Math.max(...longitudes) + 0.002, Math.max(...latitudes) + 0.002]);
+          }} style={({ pressed }) => [styles.activityFit, { backgroundColor: theme.colors.surfaceSecondary, opacity: !events.length ? 0.4 : pressed ? 0.65 : 1 }]}>
+            <SymbolView name={{ ios: 'arrow.up.left.and.arrow.down.right', android: 'fit_screen', web: 'fit_screen' }} size={20} tintColor={theme.colors.primary} />
+          </Pressable>
+        </View>
+        <View style={styles.activityCounts}>
+          {[
+            { label: 'observaciones', count: observationCount, visible: showObservations, query: observationsQuery, color: '#176B91', round: true },
+            { label: 'reportes', count: reportCount, visible: showReports, query: reportsQuery, color: '#A64616', round: false },
+          ].map((item) => <View key={item.label} style={styles.activityItem}>
+            <View style={[styles.activityDot, { backgroundColor: item.color, borderRadius: item.round ? 6 : 2, opacity: item.visible ? 1 : 0.4 }]} />
+            <Text style={[styles.activityLabel, { color: theme.colors.textPrimary }]}>
+              <Text style={styles.activityCount}>{!item.visible ? '—' : item.query.isLoading ? '…' : item.query.isError ? '!' : item.count}</Text>
+              {' '}{item.label}{!item.visible ? ' · oculta' : ''}
+            </Text>
+          </View>)}
+        </View>
+        {((showObservations && observationsQuery.isError) || (showReports && reportsQuery.isError)) &&
+          <Pressable accessibilityRole="button" onPress={() => { void observationsQuery.refetch(); void reportsQuery.refetch(); }}>
+            <Text style={{ color: theme.colors.danger, fontSize: 12, paddingVertical: 8 }}>Error en una capa · Reintentar</Text>
+          </Pressable>}
+        {showTraffic && trafficQuery.data && isAuthenticated && <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+          Área consultada: {trafficQuery.data.total_personas} personas · {trafficQuery.data.radio_km} km
+        </Text>}
+      </View>
+
+      <MapEventSheet event={selectedEvent} onClose={() => setSelectedEventId(null)} />
       <AppBottomSheet
         visible={selectedArea !== null}
         onClose={() => setSelectedArea(null)}
@@ -369,6 +427,9 @@ export function MapScreen() {
               >
                 Personas en salidas registradas
               </Text>
+              {(!showTraffic || !isAuthenticated) && <Text style={{ color: theme.colors.textSecondary }}>
+                {!isAuthenticated ? 'Iniciá sesión para consultar afluencia.' : 'Activá Afluencia en Capas del mapa para consultar esta área.'}
+              </Text>}
 
               {trafficQuery.isLoading && (
                 <View style={styles.loadingRow}>
@@ -403,7 +464,7 @@ export function MapScreen() {
                 </Text>
               )}
 
-              {trafficQuery.isSuccess && (
+              {showTraffic && isAuthenticated && trafficQuery.isSuccess && (
                 <>
                   <Text
                     style={[
@@ -595,6 +656,20 @@ export function MapScreen() {
         onClose={() => setShowLayers(false)}
         mapStyle={mapStyle}
         onMapStyleChange={setMapStyle}
+        layers={[
+          { id: 'observations', label: 'Observaciones de campo', detail: `Binoculares · ${observationStatus}`, visible: showObservations, onChange: setShowObservations },
+          { id: 'reports', label: 'Reportes técnicos', detail: `R · ${reportStatus}`, visible: showReports, onChange: setShowReports },
+          { id: 'traffic', label: 'Afluencia de personas', detail: isAuthenticated ? 'Tocá el mapa para consultar un radio de 500 m' : 'Iniciá sesión para consultar afluencia', visible: showTraffic, onChange: setShowTraffic },
+        ]}
+      />
+
+      <LoginGateModal
+        visible={showReportLogin}
+        onDismiss={() => setShowReportLogin(false)}
+        onSuccess={() => {
+          setShowReportLogin(false);
+          router.push("/(tabs)/mapa/observacion/cargar-observacion" as never);
+        }}
       />
 
       {showAccount ? (
@@ -705,6 +780,15 @@ export function MapScreen() {
   );
 }
 
+function layerStatus(query: { isLoading: boolean; isError: boolean; data?: unknown[] }, locatedCount: number) {
+  if (query.isLoading) return 'Cargando…';
+  if (query.isError) return 'Error al cargar';
+  const total = query.data?.length ?? 0;
+  if (total === 0) return 'Sin registros';
+  const missing = total - locatedCount;
+  return `${locatedCount} puntos${missing > 0 ? ` · ${missing} sin ubicación válida` : ''}`;
+}
+
 interface MapControlProps {
   label: string;
   icon: SymbolViewProps["name"];
@@ -805,18 +889,34 @@ function WeatherItem({
 }
 
 const styles = StyleSheet.create({
+  activityBar: {
+    position: 'absolute', left: 12, right: 76, maxWidth: 380,
+    borderRadius: 20, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 10,
+    shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 14,
+    shadowOffset: { width: 0, height: 5 }, elevation: 4,
+  },
+  activityHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  activityTitle: { fontSize: 10, fontWeight: '700', letterSpacing: 1.6 },
+  activityFit: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  activityCounts: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 18, rowGap: 8, paddingBottom: 6 },
+  activityItem: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  activityDot: { width: 10, height: 10 },
+  activityLabel: { fontSize: 12 },
+  activityCount: { fontSize: 19, fontWeight: '700', fontVariant: ['tabular-nums'] },
   screen: {
     flex: 1,
     overflow: "hidden",
   },
 
   overlay: {
+    position: 'absolute',
+    right: 12,
     zIndex: 4,
-    flexDirection: "row",
+    flexDirection: "column",
     alignItems: "flex-start",
     gap: 9,
-    paddingHorizontal: 12,
-    paddingTop: 8,
+    paddingHorizontal: 0,
+    paddingTop: 0,
   },
 
   safetyButton: {

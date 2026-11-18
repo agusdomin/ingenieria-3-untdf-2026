@@ -1,0 +1,2 @@
+// Inline vector: independent of fonts and external image requests in Leaflet/WebView.
+export const binocularsSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l2-8h3l1 9M20 12l-2-8h-3l-1 9M10 10h4"/><circle cx="6" cy="16" r="4"/><circle cx="18" cy="16" r="4"/><path d="M10 16h4"/></svg>';
