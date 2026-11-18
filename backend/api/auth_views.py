@@ -69,6 +69,7 @@ class AuthResponseSerializer(serializers.Serializer):
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
+    throttle_scope = 'auth'
     serializer_class = LoginSerializer
 
     @extend_schema(
@@ -106,6 +107,7 @@ class LoginView(APIView):
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
+    throttle_scope = 'auth'
     serializer_class = RegisterSerializer
 
     @extend_schema(

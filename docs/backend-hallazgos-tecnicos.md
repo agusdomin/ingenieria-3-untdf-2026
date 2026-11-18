@@ -24,6 +24,7 @@ de dominio. No se auditó el servidor de producción.
 - `deploy.sh` ejecuta `collectstatic --noinput` y comprueba un CSS del administrador.
 - `.gitattributes` fuerza LF para scripts Bash y evita errores por CRLF al ejecutarlos en Linux/WSL.
 - El contexto Docker del backend excluye media, estáticos recolectados y archivos `.env`.
+- Límites de frecuencia (rate limiting): throttles de DRF para anónimos (100/min), autenticados (1000/min) y autenticación/registro (10/min), configurables por variables de entorno.
 
 ## Hallazgos pendientes
 
@@ -54,8 +55,8 @@ de dominio. No se auditó el servidor de producción.
 10. **Archivos:** imágenes sin límite explícito de tamaño; documentos de certificación
     comprueban extensión y tamaño, pero no contenido. No hay limpieza de archivos
     reemplazados/eliminados. Nginx limita el request completo a 12 MiB.
-11. **Seguridad de despliegue:** CORS permite todos los orígenes; faltan límites de
-    frecuencia y configuración explícita de cookies seguras/HTTPS/proxy confiable.
+11. **Seguridad de despliegue:** CORS permite todos los orígenes; faltan
+    configuración explícita de cookies seguras/HTTPS/proxy confiable.
     Revisar junto con la terminación TLS real antes de activar redirects o HSTS.
 12. **Reproducibilidad:** dependencias abiertas; Gunicorn y psycopg se instalan aparte
     en Dockerfile. No se encontró pipeline CI en el repositorio.
