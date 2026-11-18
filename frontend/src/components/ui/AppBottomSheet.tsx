@@ -14,6 +14,7 @@ interface AppBottomSheetProps {
   visible: boolean;
   onClose: () => void;
   title?: string;
+  headerRight?: ReactNode;
   children: ReactNode;
 }
 
@@ -21,6 +22,7 @@ export function AppBottomSheet({
   visible,
   onClose,
   title,
+  headerRight,
   children,
 }: AppBottomSheetProps) {
   const { theme } = useTheme();
@@ -54,15 +56,20 @@ export function AppBottomSheet({
             ]}
           />
 
-          {title ? (
-            <Text
-              style={[
-                styles.title,
-                { color: theme.colors.textPrimary },
-              ]}
-            >
-              {title}
-            </Text>
+          {title || headerRight ? (
+            <View style={styles.header}>
+              {title ? (
+                <Text
+                  style={[
+                    styles.title,
+                    { color: theme.colors.textPrimary },
+                  ]}
+                >
+                  {title}
+                </Text>
+              ) : <View />}
+              {headerRight}
+            </View>
           ) : null}
 
           <ScrollView
@@ -107,9 +114,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+
   title: {
     fontSize: 18,
     fontWeight: "700",
-    marginBottom: 14,
   },
 });

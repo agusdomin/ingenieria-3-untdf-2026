@@ -175,12 +175,6 @@ export function MapContainerNative({
           <Layer id="observation-areas-fill" type="fill" paint={{ 'fill-color': ['get', 'color'], 'fill-opacity': 0.22 }} />
           <Layer id="observation-areas-border" type="line" paint={{ 'line-color': ['get', 'color'], 'line-width': 2 }} />
         </GeoJSONSource>}
-        {trafficArea && <GeoJSONSource id="traffic-area" data={circle(
-          [trafficArea.coordenadas.longitud, trafficArea.coordenadas.latitud], trafficArea.radio_km,
-        )}>
-          <Layer id="traffic-fill" type="fill" paint={{ 'fill-color': '#7254A3', 'fill-opacity': 0.12 }} />
-          <Layer id="traffic-line" type="line" paint={{ 'line-color': '#7254A3', 'line-width': 2 }} />
-        </GeoJSONSource>}
         {events?.filter((item) => item.kind === 'observation').map((item) => (
           <ViewAnnotation key={item.id} id={item.id} lngLat={item.coordinate} onPress={(event) => {
             event.stopPropagation();

@@ -48,11 +48,6 @@ export function BaseMap({
         L.geoJSON(area.feature, { style: { color: area.feature.properties?.color, weight: 2, fillOpacity: 0.22 }, bubblingMouseEvents: false })
           .on('click', () => onObservationAreaPress?.(area.id)).addTo(group);
       }
-      if (trafficArea) {
-        L.circle([trafficArea.coordenadas.latitud, trafficArea.coordenadas.longitud], {
-          radius: trafficArea.radio_km * 1000, color: '#7254A3', fillOpacity: 0.12, interactive: false,
-        }).bindTooltip(`${trafficArea.total_personas} personas en salidas · ${trafficArea.radio_km} km`, { permanent: true }).addTo(group);
-      }
       for (const item of events ?? []) {
         const label = document.createElement('span');
         label.textContent = item.title;

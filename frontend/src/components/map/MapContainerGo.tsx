@@ -28,8 +28,6 @@ window.updateMap=p=>{
  overlay.clearLayers();
  (p.observationAreas||[]).forEach(a=>L.geoJSON(a.feature,{style:{color:a.feature.properties.color,weight:2,fillOpacity:.22},bubblingMouseEvents:false})
  .on('click',()=>send('area',a.id)).addTo(overlay));
- if(p.trafficArea){const a=p.trafficArea;L.circle([a.coordenadas.latitud,a.coordenadas.longitud],{radius:a.radio_km*1000,color:'#7254A3',fillOpacity:.12,interactive:false})
- .bindTooltip(a.total_personas+' personas · '+a.radio_km+' km',{permanent:true}).addTo(overlay);}
  (p.events||[]).forEach(e=>{
  const el=document.createElement('span');
  if(e.kind==='report')el.textContent='R';else el.innerHTML=${JSON.stringify(binocularsSvg)};
