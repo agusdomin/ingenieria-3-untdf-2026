@@ -1,5 +1,6 @@
 import type { Observation } from '../../types/observation';
 import type { Report } from '../../types/report';
+import { relevance, AREA_COLORS } from './observationAreas';
 
 export interface MapEvent {
   id: string;
@@ -34,7 +35,7 @@ export function mapEvents(observations: Observation[], reports: Report[]): MapEv
       return coordinate ? [{ id: `observation-${item.id}`, kind: 'observation', coordinate,
         title: item.titulo || `Observación #${item.id}`, summary: item.descripcion || 'Sin descripción',
         author: item.usuario_nombre, date: item.fecha_hora, level: item.nivel_relevancia,
-        image: item.imagen || item.foto_url, color: '#176B91' }] : [];
+        image: item.imagen || item.foto_url, color: relevance(item.nivel_relevancia) === 'peligrosa' ? AREA_COLORS.peligrosa : '#176B91' }] : [];
     }),
     ...reports.flatMap((item): MapEvent[] => {
       const coordinate = pointCoordinates(item.coordenadas);

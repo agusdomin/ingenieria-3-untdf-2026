@@ -41,6 +41,8 @@ export function MapContainerNative({
   events,
   onEventPress,
   trafficArea,
+  observationAreas,
+  onObservationAreaPress,
 }: MapContainerProps) {
   const { theme } = useTheme();
   const camera = useRef<CameraRef>(null);
@@ -136,6 +138,15 @@ export function MapContainerNative({
         {showRiskZones ? (
           <RiskPolygonLayer zones={data} onSelectZone={onZonePress} />
         ) : null}
+        {!!observationAreas?.length && <GeoJSONSource id="observation-areas" data={{ type: 'FeatureCollection', features: observationAreas.map((area) => area.feature) }}
+          onPress={(event) => {
+            event.stopPropagation();
+            const id = event.nativeEvent.features[0]?.properties?.id;
+            if (typeof id === 'string') onObservationAreaPress?.(id);
+          }}>
+          <Layer id="observation-areas-fill" type="fill" paint={{ 'fill-color': ['get', 'color'], 'fill-opacity': 0.22 }} />
+          <Layer id="observation-areas-border" type="line" paint={{ 'line-color': ['get', 'color'], 'line-width': 2 }} />
+        </GeoJSONSource>}
         {trafficArea && <GeoJSONSource id="traffic-area" data={circle(
           [trafficArea.coordenadas.longitud, trafficArea.coordenadas.latitud], trafficArea.radio_km,
         )}>

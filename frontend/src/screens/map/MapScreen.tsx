@@ -1,4 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
+import { observationAreas } from '../../components/map/observationAreas';
+import { ObservationAreaSheet } from '../../components/map/ObservationAreaSheet';
 
 import {
   ActivityIndicator,
@@ -50,6 +52,8 @@ export function MapScreen() {
   const reportsQuery = useReports();
   const [showObservations, setShowObservations] = useState(true);
   const [showReports, setShowReports] = useState(true);
+  const [showObservationAreas, setShowObservationAreas] = useState(true);
+  const [selectedObservationAreaId, setSelectedObservationAreaId] = useState<string | null>(null);
   const [showTraffic, setShowTraffic] = useState(true);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const allEvents = useMemo(() => mapEvents(
@@ -59,6 +63,8 @@ export function MapScreen() {
     event.kind === 'observation' ? showObservations : showReports,
   ), [allEvents, showObservations, showReports]);
   const observationCount = allEvents.filter((event) => event.kind === 'observation').length;
+  const areas = useMemo(() => showObservationAreas ? observationAreas(allEvents) : [], [allEvents, showObservationAreas]);
+  const selectedObservationArea = areas.find((area) => area.id === selectedObservationAreaId) ?? null;
   const reportCount = allEvents.length - observationCount;
   const observationStatus = layerStatus(observationsQuery, observationCount);
   const reportStatus = layerStatus(reportsQuery, reportCount);
@@ -86,9 +92,16 @@ export function MapScreen() {
   useState<SelectedArea | null>(null);
   const [trafficLocation, setTrafficLocation] = useState<SelectedArea | null>(null);
   const handleEventPress = useCallback((id: string) => {
+    setSelectedObservationAreaId(null);
     Keyboard.dismiss();
     setSelectedArea(null);
     setSelectedEventId(id);
+  }, []);
+  const handleObservationAreaPress = useCallback((id: string) => {
+    Keyboard.dismiss();
+    setSelectedArea(null);
+    setSelectedEventId(null);
+    setSelectedObservationAreaId(id);
   }, []);
   const [locationNoticeDismissed, setLocationNoticeDismissed] = useState(false);
   const [mapResetVersion, setMapResetVersion] = useState(0);
@@ -139,6 +152,7 @@ export function MapScreen() {
 
       Keyboard.dismiss();
       setSelectedEventId(null);
+      setSelectedObservationAreaId(null);
       setTrafficLocation({ latitude, longitude, radius: 500 });
 
       setSelectedArea({
@@ -175,6 +189,8 @@ export function MapScreen() {
           mapStyle={mapStyle}
           showRiskZones={false}
           events={events}
+          observationAreas={areas}
+          onObservationAreaPress={handleObservationAreaPress}
           onEventPress={handleEventPress}
           trafficArea={showTraffic && isAuthenticated ? trafficQuery.data : null}
           onMapPress={handleMapPress}
@@ -403,6 +419,7 @@ export function MapScreen() {
       </View>
 
       <MapEventSheet event={selectedEvent} onClose={() => setSelectedEventId(null)} />
+      <ObservationAreaSheet area={selectedObservationArea} onClose={() => setSelectedObservationAreaId(null)} onEventPress={handleEventPress} />
       <AppBottomSheet
         visible={selectedArea !== null}
         onClose={() => setSelectedArea(null)}
@@ -657,6 +674,7 @@ export function MapScreen() {
         mapStyle={mapStyle}
         onMapStyleChange={setMapStyle}
         layers={[
+          { id: 'observation-areas', label: 'Áreas con observaciones', detail: `${areas.length} grupos · 2 km · Todas las fechas. Amarillo: informativa; naranja: precaución; rojo: peligrosa`, visible: showObservationAreas, onChange: setShowObservationAreas },
           { id: 'observations', label: 'Observaciones de campo', detail: `Binoculares · ${observationStatus}`, visible: showObservations, onChange: setShowObservations },
           { id: 'reports', label: 'Reportes técnicos', detail: `R · ${reportStatus}`, visible: showReports, onChange: setShowReports },
           { id: 'traffic', label: 'Afluencia de personas', detail: isAuthenticated ? 'Tocá el mapa para consultar un radio de 500 m' : 'Iniciá sesión para consultar afluencia', visible: showTraffic, onChange: setShowTraffic },

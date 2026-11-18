@@ -24,6 +24,8 @@ export function BaseMap({
   events,
   onEventPress,
   trafficArea,
+  observationAreas,
+  onObservationAreaPress,
 }: MapContainerProps) {
   const { theme } = useTheme();
 
@@ -42,6 +44,10 @@ export function BaseMap({
     void import('leaflet').then((L) => {
       if (disposed) return;
       group = L.layerGroup().addTo(map);
+      for (const area of observationAreas ?? []) {
+        L.geoJSON(area.feature, { style: { color: area.feature.properties?.color, weight: 2, fillOpacity: 0.22 }, bubblingMouseEvents: false })
+          .on('click', () => onObservationAreaPress?.(area.id)).addTo(group);
+      }
       if (trafficArea) {
         L.circle([trafficArea.coordenadas.latitud, trafficArea.coordenadas.longitud], {
           radius: trafficArea.radio_km * 1000, color: '#7254A3', fillOpacity: 0.12, interactive: false,
@@ -57,7 +63,7 @@ export function BaseMap({
       }
     }).catch(() => { if (!disposed) setError(true); });
     return () => { disposed = true; group?.remove(); };
-  }, [events, onEventPress, trafficArea, mapVersion]);
+  }, [events, onEventPress, trafficArea, observationAreas, onObservationAreaPress, mapVersion]);
 
   useEffect(() => {
     const position = zoomPositionRef.current;

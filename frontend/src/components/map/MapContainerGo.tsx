@@ -25,6 +25,8 @@ window.updateMap=p=>{
  control.style.top=p.zoomControlBottom==null?(p.zoomControlTop||0)+'px':'auto';
  control.style.bottom=p.zoomControlBottom==null?'auto':p.zoomControlBottom+'px';
  overlay.clearLayers();
+ (p.observationAreas||[]).forEach(a=>L.geoJSON(a.feature,{style:{color:a.feature.properties.color,weight:2,fillOpacity:.22},bubblingMouseEvents:false})
+ .on('click',()=>send('area',a.id)).addTo(overlay));
  if(p.trafficArea){const a=p.trafficArea;L.circle([a.coordenadas.latitud,a.coordenadas.longitud],{radius:a.radio_km*1000,color:'#7254A3',fillOpacity:.12,interactive:false})
  .bindTooltip(a.total_personas+' personas · '+a.radio_km+' km',{permanent:true}).addTo(overlay);}
  (p.events||[]).forEach(e=>{
@@ -48,6 +50,7 @@ export function MapContainerGo(props: MapContainerProps) {
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const payload = JSON.stringify({ mapStyle: props.mapStyle, events: props.events, trafficArea: props.trafficArea,
+    observationAreas: props.observationAreas,
     userLocation: props.userLocation, selectedLocation: props.selectedLocation, focusBounds: props.focusBounds,
     zoomControlTop: props.zoomControlTop, zoomControlBottom: props.zoomControlBottom });
   useEffect(() => {
@@ -62,6 +65,7 @@ export function MapContainerGo(props: MapContainerProps) {
           if (message.type === 'ready') { setReady(true); setFailed(false); props.onLoad?.(); }
           if (message.type === 'error') { setFailed(true); props.onError?.(); }
           if (message.type === 'event') props.onEventPress?.(message.data);
+          if (message.type === 'area') props.onObservationAreaPress?.(message.data);
           if (message.type === 'map') props.onMapPress?.(message.data);
           if (message.type === 'camera') props.onCameraChange?.(message.data);
         } catch { setFailed(true); }
