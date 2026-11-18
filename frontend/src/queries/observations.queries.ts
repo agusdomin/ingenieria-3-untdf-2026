@@ -1,8 +1,6 @@
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
+
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { CreateObservationDTO, Observation } from '../types/observation';
 
 import { queryKeys } from '../api/queryKeys';
 
@@ -23,13 +21,26 @@ export const useCreateObservation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: createObservation,
+    mutationFn: ({
+      data,
+      imageUri,
+    }: {
+      data: CreateObservationDTO;
+      imageUri?: string | null;
+    }) => createObservation(data, imageUri),
 
     onSuccess: (observation) => {
-      queryClient.setQueryData<import('../types/observation').Observation[]>(
+      queryClient.setQueryData<Observation[]>(
         queryKeys.observations.all,
-        (current) => current ? [observation, ...current.filter((item) => item.id !== observation.id)] : undefined,
+        (current) =>
+          current
+            ? [
+                observation,
+                ...current.filter((item) => item.id !== observation.id),
+              ]
+            : undefined,
       );
+
       return queryClient.invalidateQueries({
         queryKey: queryKeys.observations.all,
       });

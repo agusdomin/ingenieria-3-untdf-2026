@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useCreateObservation } from '../../queries/observations.queries';
+import { useCreateObservation } from "../../queries/observations.queries";
 import { AppImagePicker, AppSelect, AppTextArea } from "../../components/forms";
 import { AppBottomSheet } from "../../components/dialogs/AppBottomSheet";
 import { WizardHeader } from "../../components/navigation/WizardHeader";
@@ -57,8 +57,6 @@ export function NewObservationScreen() {
     setCoordinate(coordinates);
   }, []);
 
-
-
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep((step) => step - 1);
@@ -77,14 +75,17 @@ export function NewObservationScreen() {
 
     try {
       await createObservation({
-        tipo: type,
-        titulo: title.trim(),
-        descripcion: description.trim(),
-        nivel_relevancia: relevance,
-        coordenadas: {
-          longitude: coordinate[0],
-          latitude: coordinate[1],
+        data: {
+          tipo: type,
+          titulo: title.trim(),
+          descripcion: description.trim(),
+          nivel_relevancia: relevance,
+          coordenadas: {
+            longitude: coordinate[0],
+            latitude: coordinate[1],
+          },
         },
+        imageUri,
       });
 
       setIsConfirmed(true);
