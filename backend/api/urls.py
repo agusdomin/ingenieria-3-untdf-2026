@@ -13,6 +13,7 @@ from .auth_views import (
     LoginView,
     RegisterView,
     MeView,
+    RefreshTokenView,
 )
 
 router = DefaultRouter()
@@ -34,6 +35,8 @@ urlpatterns = [
     path('auth/register/', RegisterView.as_view(), name='auth-register-slash'),
     path('auth/me', MeView.as_view(), name='auth-me'),
     path('auth/me/', MeView.as_view(), name='auth-me-slash'),
+    path('auth/refresh', RefreshTokenView.as_view(), name='auth-refresh'),
+    path('auth/refresh/', RefreshTokenView.as_view(), name='auth-refresh-slash'),
 
     # Rutas generadas automáticamente por el router para los ViewSets
     path('', include(router.urls)),

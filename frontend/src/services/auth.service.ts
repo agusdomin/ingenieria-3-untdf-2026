@@ -1,5 +1,6 @@
 import {
   api,
+  getStoredToken,
   setStoredToken,
   deleteStoredToken,
 } from '../api/client';
@@ -46,4 +47,26 @@ export const getCurrentUser = async (): Promise<User> => {
 export const logout = async () => {
   await deleteStoredToken('accessToken');
   await deleteStoredToken('refreshToken');
+};
+
+export const refreshAccessToken = async (): Promise<string | null> => {
+  const currentRefreshToken = await getStoredToken('refreshToken');
+  if (!currentRefreshToken) {
+    return null;
+  }
+
+  const response = await api.post('/auth/refresh/', {
+    refreshToken: currentRefreshToken,
+  });
+
+  const { accessToken, refreshToken: newRefreshToken } = response.data;
+
+  if (accessToken) {
+    await setStoredToken('accessToken', accessToken);
+  }
+  if (newRefreshToken) {
+    await setStoredToken('refreshToken', newRefreshToken);
+  }
+
+  return accessToken;
 };

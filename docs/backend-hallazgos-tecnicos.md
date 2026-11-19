@@ -25,6 +25,7 @@ de dominio. No se auditó el servidor de producción.
 - `.gitattributes` fuerza LF para scripts Bash y evita errores por CRLF al ejecutarlos en Linux/WSL.
 - El contexto Docker del backend excluye media, estáticos recolectados y archivos `.env`.
 - Límites de frecuencia (rate limiting): throttles de DRF para anónimos (100/min), autenticados (1000/min) y autenticación/registro (10/min), configurables por variables de entorno.
+- Endpoint de refresh token: ruta `/api/auth/refresh/` implementada en el backend (admite `refreshToken` y `refresh` y retorna nuevo `accessToken`), manteniendo la duración del refresh token en 30 días.
 
 ## Hallazgos pendientes
 
@@ -35,8 +36,8 @@ de dominio. No se auditó el servidor de producción.
    Los validadores de settings no se ejecutan automáticamente con `create_user()`.
 2. **Email:** usado para login, sin restricción de unicidad en la base. La comprobación
    del registro no protege de concurrencia ni de duplicados desde edición/administración.
-3. **JWT:** se entrega refresh token, pero no hay ruta de renovación/revocación.
-   El access token dura siete días. Definir y completar el ciclo de sesión.
+3. **JWT:** endpoint `/api/auth/refresh/` resuelto en el repositorio. Pendiente definir
+   revocación/blacklist e intervalo definitivo del access token si se desea acortarlo.
 4. **Pruebas:** solo tres pruebas de imágenes. Faltan pruebas de autenticación,
    aislamiento entre usuarios, privilegios, revisión y errores del proveedor externo.
 

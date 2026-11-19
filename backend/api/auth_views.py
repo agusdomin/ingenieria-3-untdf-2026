@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth import authenticate, get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 Usuario = get_user_model()
@@ -65,6 +66,40 @@ class AuthResponseSerializer(serializers.Serializer):
     accessToken = serializers.CharField()
     refreshToken = serializers.CharField()
     user = AuthUserResponseSerializer()
+
+
+class RefreshTokenRequestSerializer(serializers.Serializer):
+    refreshToken = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        help_text='Token de refresco (formato camelCase)'
+    )
+    refresh = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        help_text='Token de refresco (formato estándar SimpleJWT)'
+    )
+
+    def validate(self, attrs):
+        token = attrs.get('refreshToken') or attrs.get('refresh')
+        if not token:
+            raise serializers.ValidationError(
+                'Debe proporcionar el token de refresco en el campo refreshToken o refresh.'
+            )
+        attrs['token'] = token
+        return attrs
+
+
+class RefreshTokenResponseSerializer(serializers.Serializer):
+    accessToken = serializers.CharField(help_text='Nuevo token de acceso')
+    refreshToken = serializers.CharField(
+        required=False,
+        help_text='Token de refresco'
+    )
+    access = serializers.CharField(
+        required=False,
+        help_text='Nuevo token de acceso (alias estándar SimpleJWT)'
+    )
 
 
 class LoginView(APIView):
@@ -159,3 +194,40 @@ class MeView(APIView):
             serialize_user_for_frontend(request.user),
             status=status.HTTP_200_OK
         )
+
+
+class RefreshTokenView(APIView):
+    permission_classes = [AllowAny]
+    throttle_scope = 'auth'
+    serializer_class = RefreshTokenRequestSerializer
+
+    @extend_schema(
+        request=RefreshTokenRequestSerializer,
+        responses={
+            200: RefreshTokenResponseSerializer,
+            400: OpenApiResponse(description='Solicitud inválida o campo faltante.'),
+            401: OpenApiResponse(description='Token de refresco inválido o expirado.')
+        },
+        summary='Refrescar token de acceso',
+        description='Genera un nuevo accessToken a partir de un refreshToken válido.'
+    )
+    def post(self, request):
+        serializer = RefreshTokenRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        token_str = serializer.validated_data['token']
+
+        try:
+            refresh = RefreshToken(token_str)
+            access_token = str(refresh.access_token)
+            data = {
+                'accessToken': access_token,
+                'refreshToken': str(refresh),
+                'access': access_token,
+            }
+            return Response(data, status=status.HTTP_200_OK)
+        except (TokenError, InvalidToken):
+            return Response(
+                {'detail': 'Token de refresco inválido o expirado.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
