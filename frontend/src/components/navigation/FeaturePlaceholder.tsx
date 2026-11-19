@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { ReactNode } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import type { SymbolViewProps } from 'expo-symbols';
@@ -12,9 +13,10 @@ interface FeaturePlaceholderProps {
   eyebrow: string;
   title: string;
   description: string;
+  children?: ReactNode;
 }
 
-export function FeaturePlaceholder({ icon, eyebrow, title, description }: FeaturePlaceholderProps) {
+export function FeaturePlaceholder({ icon, eyebrow, title, description, children }: FeaturePlaceholderProps) {
   const { theme } = useTheme();
   const router = useRouter();
 
@@ -23,13 +25,17 @@ export function FeaturePlaceholder({ icon, eyebrow, title, description }: Featur
       <View style={styles.optionsButton}>
         <MoreOptionsButton />
       </View>
-      <View style={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={[styles.iconTile, { backgroundColor: theme.colors.primarySoft }]}>
           <SymbolView name={icon} tintColor={theme.colors.primary} size={29} />
         </View>
         <Text style={[styles.eyebrow, { color: theme.colors.primary }]}>{eyebrow}</Text>
         <Text style={[styles.title, { color: theme.colors.textPrimary }]}>{title}</Text>
         <Text style={[styles.description, { color: theme.colors.textSecondary }]}>{description}</Text>
+        {children}
         <View style={[styles.note, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <View style={[styles.noteDot, { backgroundColor: theme.colors.warning }]} />
           <Text style={[styles.noteText, { color: theme.colors.textSecondary }]}>Esta sección todavía está en desarrollo.</Text>
@@ -42,14 +48,14 @@ export function FeaturePlaceholder({ icon, eyebrow, title, description }: Featur
           <SymbolView name={{ ios: 'map.fill', android: 'map', web: 'map' }} tintColor={theme.colors.textInverse} size={18} />
           <Text style={[styles.actionText, { color: theme.colors.textInverse }]}>Volver al mapa</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 28 },
+  content: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 28, paddingBottom: 40 },
   iconTile: { width: 62, height: 62, borderRadius: 21, alignItems: 'center', justifyContent: 'center', marginBottom: 26 },
   eyebrow: { fontSize: 11, fontWeight: '800', letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 10 },
   title: { fontSize: 28, lineHeight: 34, fontWeight: '700', letterSpacing: -0.7, textAlign: 'center', maxWidth: 360 },
