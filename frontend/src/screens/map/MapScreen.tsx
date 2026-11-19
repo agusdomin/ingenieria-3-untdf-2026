@@ -130,11 +130,9 @@ export function MapScreen() {
   }, []);
   const [locationNoticeDismissed, setLocationNoticeDismissed] = useState(false);
   const [mapResetVersion, setMapResetVersion] = useState(0);
-  const [bottomControlsHeight, setBottomControlsHeight] = useState(54);
 
   const bottomSpacing = Math.max(12, insets.bottom);
-  const zoomControlBottom =
-    bottomSpacing + bottomControlsHeight + 12;
+  const zoomControlBottom = bottomSpacing + 12;
 
   const userLocation = useMemo(
     () =>
@@ -651,58 +649,6 @@ export function MapScreen() {
           </Pressable>
         </View>
       )}
-
-      <View
-        pointerEvents="box-none"
-        onLayout={(event) =>
-          setBottomControlsHeight(
-            event.nativeEvent.layout.height,
-          )
-        }
-        style={[
-          styles.bottomOverlay,
-          { bottom: bottomSpacing },
-        ]}
-      >
-        <View />
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Crear reporte"
-          onPress={() => {
-            if (!isAuthenticated) {
-              Keyboard.dismiss();
-              setShowReportLogin(true);
-              return;
-            }
-            router.push("/(tabs)/mapa/observacion/cargar-observacion" as never);
-          }}
-          style={({ pressed }) => [
-            styles.reportButton,
-            { backgroundColor: theme.colors.primary },
-            pressed && styles.pressed,
-          ]}
-        >
-          <SymbolView
-            name={{
-              ios: "plus",
-              android: "add",
-              web: "add",
-            }}
-            tintColor={theme.colors.textInverse}
-            size={22}
-          />
-
-          <Text
-            style={[
-              styles.reportButtonText,
-              { color: theme.colors.textInverse },
-            ]}
-          >
-            Reportar
-          </Text>
-        </Pressable>
-      </View>
 
       <MapEventSheet event={selectedEvent} onClose={() => setSelectedEventId(null)} />
       <ObservationAreaSheet area={selectedObservationArea} onClose={() => setSelectedObservationAreaId(null)} onEventPress={handleEventPress} />
@@ -1362,40 +1308,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  bottomOverlay: {
-    position: "absolute",
-    zIndex: 3,
-    left: 12,
-    right: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    gap: 8,
-  },
-
-  reportButton: {
-    minHeight: 54,
-    borderRadius: 27,
-    paddingHorizontal: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
-    shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowRadius: 11,
-    shadowOffset: {
-      width: 0,
-      height: 5,
-    },
-    elevation: 6,
-  },
-
-  reportButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-
   areaDetails: {
     gap: 14,
   },
